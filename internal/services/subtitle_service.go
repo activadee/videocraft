@@ -215,7 +215,7 @@ func (ss *subtitleService) calculateSceneTimings(transcriptionResults []*Transcr
 	var timings []models.TimingSegment
 	currentTime := 0.0
 	
-	for i, _ := range transcriptionResults {
+	for i := range transcriptionResults {
 		// Get REAL audio file duration using AudioService (like Python ffprobe)
 		var duration float64
 		

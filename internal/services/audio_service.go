@@ -202,24 +202,6 @@ func (s *audioService) getFileExtension(contentType, url string) string {
 	return ".mp3"
 }
 
-func (s *audioService) getAudioDuration(filePath string) (float64, error) {
-	s.log.Debugf("Getting audio duration for: %s", filePath)
-
-	// Use FFprobe to get duration
-	cmd := exec.Command("ffprobe",
-		"-v", "quiet",
-		"-show_entries", "format=duration",
-		"-of", "csv=p=0",
-		filePath)
-
-	output, err := cmd.Output()
-	if err != nil {
-		return 0, fmt.Errorf("ffprobe failed: %w", err)
-	}
-
-	return parseDuration(string(output))
-}
-
 func (s *audioService) getAudioInfo(filePath string) (*AudioInfo, error) {
 	s.log.Debugf("Getting audio info for: %s", filePath)
 
@@ -295,19 +277,4 @@ type Format struct {
 	Size       string `json:"size"`
 	BitRate    string `json:"bit_rate"`
 	FormatName string `json:"format_name"`
-}
-
-// Helper function to parse duration from FFprobe output
-func parseDuration(output string) (float64, error) {
-	output = strings.TrimSpace(output)
-	if output == "" {
-		return 0, fmt.Errorf("empty duration output")
-	}
-
-	duration, err := strconv.ParseFloat(output, 64)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse duration: %w", err)
-	}
-
-	return duration, nil
 }

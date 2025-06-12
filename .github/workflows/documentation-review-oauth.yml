@@ -29,6 +29,7 @@ permissions:
   pull-requests: write
   issues: write
   checks: write
+  actions: write
 
 jobs:
   analyze-and-fix-docs:
