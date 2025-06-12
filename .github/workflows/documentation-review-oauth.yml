@@ -35,6 +35,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+      id-token: write
       
     steps:
       - name: Checkout code
@@ -50,7 +51,7 @@ jobs:
           
       - name: Review and Fix Documentation
         id: claude-review
-        uses: grll/claude-code-action@beta
+        uses: grll/claude-code-action@v0.0.13
         with:
           use_oauth: true
           claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
