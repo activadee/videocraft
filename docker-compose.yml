@@ -22,7 +22,7 @@ services:
     read_only: true
     security_opt:
       - no-new-privileges:true
-      - seccomp:unconfined
+      # Note: Default seccomp profile is applied automatically when not specified
     cap_drop:
       - ALL
     cap_add:
