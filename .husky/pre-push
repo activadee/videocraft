@@ -1,0 +1,13 @@
+#!/bin/bash
+
+echo "Running pre-push checks..."
+
+# Run comprehensive linting and tests
+make lint && make test
+
+if [ $? -ne 0 ]; then
+    echo "❌ Pre-push checks failed!"
+    exit 1
+fi
+
+echo "✅ Pre-push checks passed!"

@@ -12,8 +12,7 @@
   "lint-staged": {
     "*.go": [
       "gofmt -w",
-      "goimports -w",
-      "golangci-lint run --fix --new-from-rev=HEAD~1"
+      "goimports -w"
     ],
     "*.py": [
       "black",
