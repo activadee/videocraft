@@ -67,9 +67,23 @@ The server will start on `http://localhost:8080`
 
 ## API Usage
 
+⚠️ **Authentication Required**: As of v1.0, all API endpoints require authentication. See [Security Guide](SECURITY.md) for details.
+
+### Get Your API Key
+VideoCraft automatically generates a secure API key on first startup. Check the logs:
+```bash
+# The API key will be shown in the startup logs
+docker-compose logs videocraft | grep "API key"
+```
+
+Or set your own:
+```bash
+export VIDEOCRAFT_SECURITY_API_KEY="your-secure-api-key"
+```
+
 ### Generate Video
 ```bash
-curl -X POST http://localhost:8080/api/v1/videos \
+curl -X POST http://localhost:3002/api/v1/generate-video \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d @config.json
@@ -77,13 +91,13 @@ curl -X POST http://localhost:8080/api/v1/videos \
 
 ### Check Job Status
 ```bash
-curl http://localhost:8080/api/v1/jobs/{job_id}/status \
+curl http://localhost:3002/api/v1/jobs/{job_id}/status \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Download Video
 ```bash
-curl http://localhost:8080/api/v1/videos/{video_id}/download \
+curl http://localhost:3002/api/v1/download/{video_id} \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -o output.mp4
 ```

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -133,6 +135,16 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	// Generate API key if authentication is enabled but no key is provided
+	// Only generate if no API key is configured via environment or config file
+	if config.Security.EnableAuth && config.Security.APIKey == "" && !viper.IsSet("security.api_key") {
+		generatedKey, err := generateSecureAPIKey()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate API key: %w", err)
+		}
+		config.Security.APIKey = generatedKey
+	}
+
 	return &config, nil
 }
 
@@ -187,8 +199,19 @@ func setDefaults() {
 	viper.SetDefault("log.level", "debug")
 	viper.SetDefault("log.format", "text")
 
-	// Security defaults
+	// Security defaults - CRITICAL: Authentication enabled by default for security
 	viper.SetDefault("security.rate_limit", 100)
-	viper.SetDefault("security.enable_auth", false)
+	viper.SetDefault("security.enable_auth", true)
 	viper.SetDefault("security.allowed_domains", []string{})
+}
+
+// generateSecureAPIKey generates a cryptographically secure API key
+func generateSecureAPIKey() (string, error) {
+	// Generate 32 random bytes (256 bits)
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	// Encode as hexadecimal string (64 characters)
+	return hex.EncodeToString(bytes), nil
 }
