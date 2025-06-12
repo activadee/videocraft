@@ -21,6 +21,14 @@ from contextlib import redirect_stdout
 # Add the scripts directory to the path so we can import whisper_daemon
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Inject stub whisper module into sys.modules to prevent ModuleNotFoundError during patching
+if 'whisper' not in sys.modules:
+    class WhisperStub:
+        def load_model(self, *args, **kwargs):
+            return MagicMock()
+    
+    sys.modules['whisper'] = WhisperStub()
+
 try:
     from whisper_daemon import WhisperDaemon
 except ImportError:
