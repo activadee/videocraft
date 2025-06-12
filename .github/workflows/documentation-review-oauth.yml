@@ -7,20 +7,20 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - '**.md'
-      - 'docs/**'
-      - 'CLAUDE.md'
-      - '**/CLAUDE.md'
-      - 'README.md'
-      - 'CHANGELOG.md'
-      - 'internal/**/*.go'
-      - 'pkg/**/*.go'
-      - 'cmd/**/*.go'
-      - 'scripts/**/*.py'
-  workflow_dispatch:  # Allow manual triggers
+      - "**.md"
+      - "docs/**"
+      - "CLAUDE.md"
+      - "**/CLAUDE.md"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "internal/**/*.go"
+      - "pkg/**/*.go"
+      - "cmd/**/*.go"
+      - "scripts/**/*.py"
+  workflow_dispatch: # Allow manual triggers
     inputs:
       pr_number:
-        description: 'PR number to process'
+        description: "PR number to process"
         required: true
         type: number
 
@@ -35,40 +35,40 @@ jobs:
   analyze-and-fix-docs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.pull_request.title, '[skip ci]')"
-    
+
     permissions:
       contents: write
       pull-requests: write
       id-token: write
-      
+
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Full history for proper diff analysis
+          fetch-depth: 0 # Full history for proper diff analysis
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
-          
+
       - name: Configure Git
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "Documentation Bot"
-          
+
       - name: Analyze changes against main
         id: analyze-diff
         run: |
           # Fetch main branch for comparison
           git fetch origin main:main
-          
+
           # Get list of changed files
           CHANGED_FILES=$(git diff --name-only main..HEAD | grep -E '\.(md|go|py)$' || echo "")
           echo "Changed files:"
           echo "$CHANGED_FILES"
-          
+
           # Get diff content for documentation files
           DOC_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(md)$' || echo "")
           CODE_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(go|py)$' || echo "")
-          
+
           # Create diff summary
           if [ -n "$DOC_FILES" ]; then
             echo "📝 Documentation files changed:"
@@ -77,7 +77,7 @@ jobs:
           else
             echo "doc_changes=false" >> $GITHUB_OUTPUT
           fi
-          
+
           if [ -n "$CODE_FILES" ]; then
             echo "💻 Code files changed (may need doc updates):"
             echo "$CODE_FILES" | sed 's/^/  - /'
@@ -85,13 +85,13 @@ jobs:
           else
             echo "code_changes=false" >> $GITHUB_OUTPUT
           fi
-          
+
           # Save changed files for Claude analysis
           echo "$CHANGED_FILES" > /tmp/changed_files.txt
-          
+
           # Get the actual diff content
           git diff main..HEAD -- $DOC_FILES > /tmp/doc_diff.txt 2>/dev/null || echo "No doc diff" > /tmp/doc_diff.txt
-          
+
           # Check if this is a critical change
           COMMIT_MESSAGES=$(git log main..HEAD --pretty=format:"%s %b")
           if echo "$COMMIT_MESSAGES" | grep -iE "(security|api|breaking|critical)" > /dev/null; then
@@ -111,30 +111,30 @@ jobs:
           claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
           claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
           timeout_minutes: "30"
-          
+
           direct_prompt: |
             🤖 **VideoCraft PR Documentation Auto-Fix**
-            
+
             I'm analyzing a pull request and need to automatically fix documentation issues based on the changes made.
-            
+
             ## 📊 **PR Context**
             - **PR**: #${{ github.event.pull_request.number || github.event.inputs.pr_number }}
             - **Branch**: ${{ github.event.pull_request.head.ref || github.ref_name }}
             - **Author**: ${{ github.event.pull_request.user.login || github.actor }}
             - **Critical Change**: ${{ steps.analyze-diff.outputs.critical_change }}
-            
+
             ## 🔍 **Changes Analysis**
-            
+
             **Documentation files changed**: ${{ steps.analyze-diff.outputs.doc_changes }}
             **Code files changed**: ${{ steps.analyze-diff.outputs.code_changes }}
-            
+
             The following files were modified in this PR:
             ```
             $(cat /tmp/changed_files.txt)
             ```
-            
+
             ## 🎯 **Auto-Fix Tasks** (Execute immediately)
-            
+
             ### 1. **Immediate Formatting Fixes**
             - Fix markdown syntax errors in changed files
             - Add missing code block language tags
@@ -144,7 +144,7 @@ jobs:
             - Remove trailing whitespace
             - Ensure consistent line endings
             - Fix table formatting issues
-            
+
             ### 2. **Content Corrections**
             - Fix spelling and grammar errors
             - Correct obvious typos
@@ -152,7 +152,7 @@ jobs:
             - Fix broken external links where possible
             - Standardize terminology usage
             - Correct code syntax in examples
-            
+
             ### 3. **VideoCraft-Specific Updates**
             Based on code changes, update documentation to reflect:
             - New API endpoints or modified endpoints
@@ -161,24 +161,24 @@ jobs:
             - Modified Python/Go import statements
             - New environment variables
             - Updated command-line arguments
-            
+
             ### 4. **Cross-Reference Sync**
             - Update links between CLAUDE.md files
             - Ensure README.md reflects new features
             - Sync version numbers across docs
             - Update changelog if needed
-            
+
             ## 📝 **Critical Instructions**
-            
+
             **IMPORTANT: You MUST actually edit the files, not just suggest changes.**
-            
+
             1. **Focus only on files that changed in this PR**
             2. **Read the diff content to understand what changed**
             3. **Make safe, obvious improvements only** 
             4. **Update docs to match code changes**
             5. **Do not modify technical content without verification**
             6. **If code added new features, add basic documentation**
-            
+
             ## ✅ **Safe to Fix Automatically**
             - Markdown formatting issues
             - Obvious typos and grammar errors
@@ -187,26 +187,27 @@ jobs:
             - Inconsistent heading styles
             - Adding documentation for new public APIs
             - Updating configuration examples
-            
+
             ## 🚫 **Do NOT Fix** (Leave for manual review)
             - Complex architectural explanations
             - Security implementation details
             - Performance benchmarks or claims
             - Third-party integration details
             - Breaking change impacts (flag for review)
-            
+            - Any file in worfkflows or CI/CD directories
+
             ## 🔥 **If Critical Change Detected**
             Additionally:
             - Add clear warnings about breaking changes
             - Update migration instructions
             - Add security notices if applicable
             - Update version compatibility notes
-            
+
             **Start by examining the changed files and their diff, then make necessary edits.**
-            
+
           include_diff: true
           model: "claude-sonnet-4-20250514"
-          
+
       - name: Check for documentation updates
         id: verify-changes
         run: |
@@ -229,33 +230,33 @@ jobs:
             echo "## Sample of changes:"
             git diff --unified=2 | head -50
           fi
-          
+
       - name: Commit documentation fixes
         if: steps.verify-changes.outputs.changes == 'true'
         run: |
           # Create descriptive commit message
           CHANGED_FILES=$(git diff --name-only | tr '\n' ' ')
-          
+
           git add -A
           git commit -m "docs: auto-fix documentation for PR #${{ github.event.pull_request.number }} [skip ci]
-          
+
           🤖 Automated documentation improvements:
           - Fixed markdown formatting issues
           - Corrected spelling and grammar
           - Updated documentation for code changes
           - Standardized code highlighting
           - Improved consistency across files
-          
+
           Files updated: $CHANGED_FILES
-          
+
           Generated by GitHub Actions Documentation Bot"
-          
+
       - name: Push fixes to PR branch
         if: steps.verify-changes.outputs.changes == 'true'
         run: |
           # Push to the PR branch
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          
+
       - name: Comment on PR
         if: steps.verify-changes.outputs.changes == 'true'
         uses: actions/github-script@v7
@@ -266,9 +267,9 @@ jobs:
               repo: context.repo.repo,
               pull_number: ${{ github.event.pull_request.number }}
             });
-            
+
             const changedFiles = files.map(f => f.filename).join('\n- ');
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -305,12 +306,12 @@ jobs:
        contains(github.event.pull_request.title, 'api') || 
        contains(github.event.pull_request.title, 'breaking') ||
        contains(github.event.pull_request.body, 'breaking change'))
-    
+
     permissions:
       contents: write
       issues: write
       pull-requests: write
-      
+
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -318,12 +319,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
-          
+
       - name: Configure Git
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "Documentation Bot"
-          
+
       - name: Critical Documentation Sync
         uses: grll/claude-code-action@beta
         with:
@@ -331,21 +332,21 @@ jobs:
           claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
           claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
           claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
-          
+
           direct_prompt: |
             🚨 **CRITICAL: PR Documentation Sync Required** 
-            
+
             This pull request appears to contain critical changes (security/API/breaking).
             I need to ensure documentation is completely up-to-date.
-            
+
             ## 🔍 **PR Information**
             - **PR**: #${{ github.event.pull_request.number }}
             - **Title**: ${{ github.event.pull_request.title }}
             - **Branch**: ${{ github.event.pull_request.head.ref }}
             - **Author**: ${{ github.event.pull_request.user.login }}
-            
+
             ## 🎯 **Critical Sync Tasks**
-            
+
             ### 🔒 **Security Changes**
             If security-related:
             - Update `security-first.md` with new requirements
@@ -354,7 +355,7 @@ jobs:
             - Document new environment variables for security
             - Add clear migration notes for security updates
             - Update authentication/authorization documentation
-            
+
             ### 🔌 **API Changes** 
             If API-related:
             - Update API documentation in `internal/api/CLAUDE.md`
@@ -363,7 +364,7 @@ jobs:
             - Document request/response format changes
             - Add version compatibility notes
             - Update OpenAPI specs if applicable
-            
+
             ### 💥 **Breaking Changes**
             If breaking changes:
             - Add prominent breaking change notices
@@ -372,30 +373,30 @@ jobs:
             - Add deprecation warnings with timelines
             - Document upgrade path step-by-step
             - Update minimum version requirements
-            
+
             ## 📝 **Required Actions**
-            
+
             **You MUST make actual documentation updates:**
-            
+
             1. **Analyze the PR diff thoroughly**
             2. **Identify all documentation requiring updates**
             3. **Make comprehensive file edits immediately**
             4. **Ensure critical information is prominently displayed**
             5. **Add clear, actionable upgrade instructions**
             6. **Update all relevant cross-references**
-            
+
             ## 🎯 **Focus Areas**
             - User safety and security
             - Clear upgrade paths
             - Backward compatibility notes
             - Breaking change impacts
             - Migration timelines
-            
+
             **This is critical - documentation must be complete and accurate before merge.**
-            
+
           include_diff: true
-          model: 'claude-sonnet-4-20250514'
-          
+          model: "claude-sonnet-4-20250514"
+
       - name: Check for critical updates
         id: check-critical
         run: |
@@ -407,24 +408,24 @@ jobs:
             echo "🚨 Critical documentation updates made:"
             git diff --name-only | sed 's/^/  - /'
           fi
-          
+
       - name: Commit critical documentation updates
         if: steps.check-critical.outputs.critical_changes == 'true'
         run: |
           git add -A
           git commit -m "docs: critical documentation sync for PR #${{ github.event.pull_request.number }} [skip ci]
-          
+
           🚨 CRITICAL: Updated documentation for security/API/breaking changes
           - Added breaking change notices
           - Updated migration instructions
           - Added security documentation
           - Updated API documentation
           - Added compatibility notes
-          
+
           Generated by GitHub Actions (Critical Sync)"
-          
+
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          
+
       - name: Add critical review label and comment
         if: steps.check-critical.outputs.critical_changes == 'true'
         uses: actions/github-script@v7
@@ -437,7 +438,7 @@ jobs:
               issue_number: ${{ github.event.pull_request.number }},
               labels: ['critical-review', 'documentation', 'breaking-change']
             });
-            
+
             // Add comment requiring manual review
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -474,7 +475,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [analyze-and-fix-docs, critical-sync-check]
     if: always()
-    
+
     steps:
       - name: Set documentation status
         uses: actions/github-script@v7
@@ -482,12 +483,12 @@ jobs:
           script: |
             const conclusion = '${{ needs.analyze-and-fix-docs.result }}' === 'success' ? 'success' : 'failure';
             const critical = '${{ needs.critical-sync-check.result }}' === 'success' || '${{ needs.critical-sync-check.result }}' === 'skipped';
-            
+
             let description = 'Documentation auto-fix completed';
             if ('${{ needs.critical-sync-check.result }}' === 'success') {
               description += ' with critical updates - manual review required';
             }
-            
+
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
