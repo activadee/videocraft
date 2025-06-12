@@ -13,11 +13,30 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+# Build arguments
+ARG VERSION=dev
+ARG BUILD_DATE
+ARG VCS_REF
+
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-w -s' -o videocraft cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
+    -ldflags "-w -s -X main.version=${VERSION} -X main.buildDate=${BUILD_DATE} -X main.gitCommit=${VCS_REF}" \
+    -o videocraft cmd/server/main.go
 
 # Final stage
 FROM alpine:latest
+
+# Add metadata
+LABEL org.opencontainers.image.title="VideoCraft" \
+      org.opencontainers.image.description="Advanced video generation platform with progressive subtitles" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.vendor="Activadee" \
+      org.opencontainers.image.source="https://github.com/activadee/videocraft" \
+      org.opencontainers.image.url="https://github.com/activadee/videocraft" \
+      org.opencontainers.image.documentation="https://github.com/activadee/videocraft#readme" \
+      org.opencontainers.image.licenses="MIT"
 
 # Install runtime dependencies
 RUN apk add --no-cache \

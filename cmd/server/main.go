@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -15,7 +18,31 @@ import (
 	"github.com/activadee/videocraft/pkg/logger"
 )
 
+// Build information (set via ldflags)
+var (
+	version   = "dev"
+	gitCommit = "unknown"
+	buildDate = "unknown"
+)
+
 func main() {
+	// Parse command line flags
+	var (
+		showVersion = flag.Bool("version", false, "Show version information")
+		showHelp    = flag.Bool("help", false, "Show help information")
+	)
+	flag.Parse()
+
+	if *showVersion {
+		printVersion()
+		os.Exit(0)
+	}
+
+	if *showHelp {
+		printHelp()
+		os.Exit(0)
+	}
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -86,4 +113,35 @@ func initializeServices(cfg *config.Config, log logger.Logger) *services.Service
 		Storage:       storageSvc,
 		Job:           jobSvc,
 	}
+}
+
+func printVersion() {
+	fmt.Printf("VideoCraft %s\n", version)
+	fmt.Printf("Git Commit: %s\n", gitCommit)
+	fmt.Printf("Build Date: %s\n", buildDate)
+	fmt.Printf("Go Version: %s\n", runtime.Version())
+	fmt.Printf("OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
+}
+
+func printHelp() {
+	fmt.Println("VideoCraft - Advanced Video Generation Platform")
+	fmt.Println()
+	fmt.Println("USAGE:")
+	fmt.Println("  videocraft [flags]")
+	fmt.Println()
+	fmt.Println("FLAGS:")
+	fmt.Println("  -help      Show help information")
+	fmt.Println("  -version   Show version information")
+	fmt.Println()
+	fmt.Println("ENVIRONMENT VARIABLES:")
+	fmt.Println("  Configuration can be set via environment variables with VIDEOCRAFT_ prefix")
+	fmt.Println("  Example: VIDEOCRAFT_SERVER_PORT=8080")
+	fmt.Println()
+	fmt.Println("CONFIGURATION:")
+	fmt.Println("  Configuration files are searched in:")
+	fmt.Println("  - ./config.yaml")
+	fmt.Println("  - ./config/config.yaml") 
+	fmt.Println("  - /etc/videocraft/config.yaml")
+	fmt.Println()
+	fmt.Println("For more information, visit: https://github.com/activadee/videocraft")
 }

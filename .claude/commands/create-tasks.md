@@ -1,457 +1,492 @@
-# Claude Slash Command: `/create-tasks`
+# Claude Slash Command: `/create-issues`
 
 ## Command Overview
-**Purpose**: Analyze a feature idea against current implementation and generate a structured task file compatible with `/work-on-task`.
+**Purpose**: Analyze a feature idea against current implementation and create GitHub Issues with structured task breakdown.
 
-**Syntax**: `/create-tasks <feature-description> [--output=filename.md] [--codebase=path]`
+**Syntax**: `/create-issues <feature-description> [--repo=owner/repo] [--milestone=name] [--epic]`
 
 **Examples**: 
-- `/create-tasks "Add user authentication with JWT tokens"`
-- `/create-tasks "Implement real-time notifications" --output=notifications-tasks.md`
-- `/create-tasks "Dark mode theme support" --codebase=./src --output=theme-tasks.md`
+- `/create-issues "Add user authentication with JWT tokens"`
+- `/create-issues "Implement real-time notifications" --repo=myorg/backend --milestone="v2.1"`
+- `/create-issues "Dark mode theme support" --repo=myorg/frontend --epic`
 
-**Note**: All task files are automatically saved to the `tasks/` directory for organization and compatibility with `/work-on-task`.
+**Note**: Creates individual GitHub Issues for each task, with proper labels, milestones, and cross-references.
 
 ---
 
 ## Command Description
 
-This slash command performs comprehensive feature analysis and generates implementation tasks. Claude will:
+This slash command performs comprehensive feature analysis and creates GitHub Issues for implementation. Claude will:
 
 1. **Analyze** the feature request and current system architecture
-2. **Identify** gaps, dependencies, and implementation challenges  
-3. **Break down** the feature into manageable, testable tasks
-4. **Generate** a structured markdown file compatible with `/work-on-task`
-5. **Prioritize** tasks based on dependencies and complexity
-6. **Ensure** each task follows TDD-compatible acceptance criteria format
+2. **Break down** the feature into manageable, testable GitHub Issues
+3. **Create** structured Issues with labels, milestones, and task lists
+4. **Link** related Issues and establish proper dependencies
+5. **Generate** an Epic Issue (optional) to track overall feature progress
+6. **Apply** consistent labeling and project management metadata
 
 ---
 
 ## System Instructions
 
 ### Role Definition
-You are a senior technical architect and product analyst specializing in feature decomposition and system design. When the `/create-tasks` command is invoked, you will:
+You are a senior technical architect and GitHub project manager specializing in issue creation and project organization. When the `/create-issues` command is invoked, you will:
 
-1. **Switch to feature analysis mode**
-2. **Conduct thorough technical assessment**
-3. **Generate comprehensive task breakdown**
-4. **Ensure TDD-compatible output format**
-5. **Consider scalability and maintainability**
+1. **Switch to GitHub Issues mode**
+2. **Conduct thorough feature analysis**
+3. **Create properly structured GitHub Issues**
+4. **Establish issue relationships and dependencies**
+5. **Apply appropriate labels and metadata**
 
-### Analysis Workflow
+### GitHub Issues Workflow
 
-#### Phase 1: Feature Understanding & Scope Definition
+#### Phase 1: Feature Analysis & Issue Planning
 ```
-STEP 1: Feature Analysis
-- Parse and understand the feature request
-- Identify core functionality requirements
-- Determine user personas and use cases
-- Extract functional and non-functional requirements
-- Define success criteria and acceptance boundaries
+STEP 1: Feature Decomposition
+- Break down feature into atomic, implementable tasks
+- Identify Epic vs Individual Issues structure
+- Map dependencies between tasks
+- Determine appropriate GitHub labels and milestones
 
-STEP 2: Current System Assessment
-- Analyze existing codebase architecture
-- Identify relevant modules and components
-- Map current data models and APIs
-- Review existing patterns and conventions
-- Assess technical debt and constraints
+STEP 2: Repository Analysis
+- Review existing issue patterns and labels
+- Check current milestone structure
+- Analyze existing Epic/Feature tracking methods
+- Assess team workflow and conventions
 ```
 
-#### Phase 2: Technical Architecture Planning
+#### Phase 2: Issue Creation Strategy
 ```
-STEP 3: Impact Analysis
-- Identify affected systems and components
-- Map data flow and integration points
-- Assess security and performance implications
-- Review scalability and maintenance concerns
-- Identify potential breaking changes
+STEP 3: Issue Structure Planning
+- Plan Epic Issue (if --epic flag used)
+- Design individual task issues
+- Establish issue linking strategy
+- Plan label taxonomy and assignments
 
-STEP 4: Dependency Mapping
-- List external dependencies and services
-- Identify internal module dependencies
-- Map database schema changes required
-- Review API contract modifications needed
-- Plan migration and rollback strategies
-```
-
-#### Phase 3: Task Decomposition & Prioritization
-```
-STEP 5: Task Breakdown
-- Decompose feature into atomic, testable units
-- Create logical task sequences and dependencies
-- Ensure each task delivers measurable value
-- Balance task complexity and implementation time
-- Consider parallel development opportunities
-
-STEP 6: Risk Assessment & Mitigation
-- Identify high-risk implementation areas
-- Plan proof-of-concept tasks for unknowns
-- Design fallback strategies for critical components
-- Schedule integration and testing milestones
-- Define rollback and monitoring procedures
+STEP 4: Content Generation
+- Generate issue titles (clear, actionable)
+- Create detailed issue descriptions
+- Develop acceptance criteria checklists
+- Plan issue templates and formatting
 ```
 
 ---
 
-## Output Format Structure
+## GitHub Issue Template Structure
 
-### File Header & Metadata
+### Epic Issue Template (when --epic flag used)
 ```markdown
-# Feature Implementation Tasks: [Feature Name]
+# Epic: [Feature Name]
 
-## Feature Overview
+## 🎯 Feature Overview
 **Feature Request**: [Original description]
-**Analysis Date**: [ISO timestamp]
-**Estimated Effort**: [Total story points/hours]
-**Priority**: [High/Medium/Low]
-**Target Release**: [Version/Sprint]
+**Business Value**: [Why this feature matters]
+**Target Release**: [Milestone/Version]
+**Epic Size**: [Estimated total effort]
 
-## Current System Analysis
-### Affected Components
-- [Component 1]: [Impact description]
-- [Component 2]: [Impact description]
+## 📋 Implementation Tasks
+- [ ] #[issue-1] - [Task 1 Title]
+- [ ] #[issue-2] - [Task 2 Title]  
+- [ ] #[issue-3] - [Task 3 Title]
+- [ ] #[issue-4] - [Task 4 Title]
 
-### Architecture Changes Required
-- [Change 1]: [Technical details]
-- [Change 2]: [Technical details]
+## 🏗️ Architecture Overview
+[High-level technical approach and system changes]
 
-### Dependencies & Constraints
-- **External Dependencies**: [List]
-- **Internal Dependencies**: [List]
-- **Technical Constraints**: [List]
-- **Business Constraints**: [List]
+## ✅ Epic Acceptance Criteria
+- [ ] All subtasks completed and tested
+- [ ] Integration testing passed
+- [ ] Documentation updated
+- [ ] Performance requirements met
+- [ ] Security review completed
 
-## Implementation Strategy
-[High-level approach and phasing strategy]
+## 🔗 Related Issues
+- Depends on: [List of blocking issues/epics]
+- Blocks: [List of dependent issues/epics]
+
+## 📊 Progress Tracking
+**Status**: Planning
+**Completion**: 0/[total-tasks] tasks completed
+**Last Updated**: [Auto-updated timestamp]
+
+---
+**Labels**: `epic`, `feature`, `[priority-level]`, `[component-area]`
+**Milestone**: [Target milestone]
+**Assignee**: [Team lead or architect]
 ```
 
-### Task Format (Compatible with /work-on-task)
+### Individual Task Issue Template
 ```markdown
-## Task [Number]: [Clear, Action-Oriented Title]
+# [Task Title]: [Clear, Action-Oriented Description]
 
-### User Story
+## 📖 User Story
 As a [user type], I want [functionality] so that [business value/benefit].
 
-### Acceptance Criteria
-**Given** [context/initial state]
-**When** [user action/trigger event]
-**Then** [expected outcome/system behavior]
+## ✅ Acceptance Criteria
+- [ ] **Given** [context/initial state]  
+      **When** [user action/trigger event]  
+      **Then** [expected outcome/system behavior]
 
-**Given** [alternative context]
-**When** [different action]
-**Then** [alternative outcome]
+- [ ] **Given** [alternative context]  
+      **When** [different action]  
+      **Then** [alternative outcome]
 
-[Additional scenarios as needed]
+- [ ] **Given** [edge case scenario]  
+      **When** [error condition]  
+      **Then** [proper error handling]
 
-### Technical Specifications
-- **Implementation Approach**: [Technical strategy]
-- **API Changes**: [Endpoint modifications/additions]
-- **Database Changes**: [Schema modifications]
-- **Security Considerations**: [Auth, validation, encryption]
-- **Performance Requirements**: [SLA, response times]
-- **Error Handling**: [Expected error scenarios]
+## 🔧 Technical Specifications
+### Implementation Approach
+[Technical strategy and approach]
 
-### Definition of Done
-- [ ] All acceptance criteria have passing tests
+### API Changes
+- [ ] [Endpoint 1]: [Description]
+- [ ] [Endpoint 2]: [Description]
+
+### Database Changes
+- [ ] [Schema change 1]: [Description]
+- [ ] [Migration script]: [Description]
+
+### Security Considerations
+- [ ] [Security requirement 1]
+- [ ] [Security requirement 2]
+
+## 🧪 Testing Requirements
+### Unit Tests
+- [ ] [Test scenario 1]
+- [ ] [Test scenario 2]
+
+### Integration Tests  
+- [ ] [Integration test 1]
+- [ ] [Integration test 2]
+
+### E2E Tests
+- [ ] [User workflow test 1]
+- [ ] [User workflow test 2]
+
+## 📚 Definition of Done
+- [ ] All acceptance criteria implemented and tested
 - [ ] Code review completed and approved
-- [ ] Documentation updated (API docs, README)
-- [ ] Security review passed (if applicable)
+- [ ] Unit tests written and passing (>90% coverage)
+- [ ] Integration tests passing
+- [ ] API documentation updated
+- [ ] Security review completed (if applicable)
 - [ ] Performance benchmarks met
-- [ ] Integration tests pass
-- [ ] Deployment script updated
-- [ ] Monitoring/logging implemented
+- [ ] Error handling and logging implemented
+- [ ] Feature flag configuration (if applicable)
 
-### Test Strategy
-- **Unit Tests**: [Specific test scenarios]
-- **Integration Tests**: [Component interaction tests]
-- **E2E Tests**: [User workflow validation]
-- **Performance Tests**: [Load/stress testing requirements]
-- **Security Tests**: [Vulnerability assessments]
+## 🔗 Dependencies
+**Blocked by**: [List of issues that must be completed first]
+**Blocks**: [List of issues that depend on this one]
+**Related**: [List of related issues for context]
 
-### Dependencies
-- **Blocked By**: [List of prerequisite tasks]
-- **Blocks**: [List of dependent tasks]
-- **External Dependencies**: [Third-party services, APIs]
+## 💡 Implementation Notes
+**Estimated Effort**: [Story points/hours]
+**Priority**: [High/Medium/Low]
+**Complexity**: [High/Medium/Low]
+**Risk Level**: [High/Medium/Low]
 
-### Implementation Notes
-- **Estimated Effort**: [Story points/hours]
-- **Priority**: [High/Medium/Low]
-- **Risk Level**: [High/Medium/Low]
-- **Complexity**: [High/Medium/Low]
+### Technical Decisions
+- [Decision 1]: [Rationale]
+- [Decision 2]: [Rationale]
 
 ### Reference Materials
-- [Link to design documents]
-- [API specifications]
-- [Related tickets/issues]
-- [Research findings]
+- [Design document link]
+- [API specification link]
+- [Research findings link]
 
 ---
+**Labels**: `task`, `[priority-level]`, `[component-area]`, `[task-type]`
+**Milestone**: [Target milestone]
+**Epic**: #[epic-issue-number]
+**Estimated Time**: [Hours/Story Points]
 ```
 
-### File Footer & Summary
+---
+
+## Label Strategy & Organization
+
+### Automatic Label Application
+```yaml
+# Priority Labels
+priority/critical: Issues blocking release or causing system failures
+priority/high: Important features or significant bugs
+priority/medium: Standard feature work and non-critical bugs  
+priority/low: Nice-to-have improvements and minor issues
+
+# Type Labels
+type/epic: Large features spanning multiple issues
+type/task: Individual implementation tasks
+type/bug: Defect fixes
+type/enhancement: Improvements to existing features
+type/documentation: Documentation updates
+
+# Component Labels (Auto-detected from codebase analysis)
+component/api: Backend API changes
+component/frontend: UI/UX implementation
+component/database: Database schema or query changes
+component/auth: Authentication and authorization
+component/integration: Third-party service integration
+component/testing: Test infrastructure and quality assurance
+
+# Status Labels
+status/planning: Issue in planning phase
+status/ready: Ready for development
+status/in-progress: Currently being worked on
+status/review: In code review
+status/testing: In QA testing phase
+status/blocked: Blocked by dependencies
+
+# Effort Labels
+effort/small: 1-2 days of work
+effort/medium: 3-5 days of work  
+effort/large: 1-2 weeks of work
+effort/xlarge: 2+ weeks of work
+```
+
+### Milestone Integration
 ```markdown
-## Task Summary & Roadmap
-
-### Phase 1: Foundation (Tasks 1-X)
-- [Task brief descriptions]
-- **Estimated Duration**: [Timeline]
-- **Key Deliverables**: [Major milestones]
-
-### Phase 2: Core Implementation (Tasks X-Y)
-- [Task brief descriptions]
-- **Estimated Duration**: [Timeline]
-- **Key Deliverables**: [Major milestones]
-
-### Phase 3: Integration & Polish (Tasks Y-Z)
-- [Task brief descriptions]
-- **Estimated Duration**: [Timeline]
-- **Key Deliverables**: [Major milestones]
-
-## Risk Register
-| Risk | Impact | Probability | Mitigation Strategy |
-|------|---------|-------------|-------------------|
-| [Risk 1] | [High/Med/Low] | [High/Med/Low] | [Strategy] |
-| [Risk 2] | [High/Med/Low] | [High/Med/Low] | [Strategy] |
-
-## Quality Gates
-- [ ] All tasks have comprehensive acceptance criteria
-- [ ] Dependencies clearly mapped and documented
-- [ ] Security considerations addressed in each task
-- [ ] Performance requirements defined and measurable
-- [ ] Rollback strategies planned for major changes
-- [ ] Monitoring and observability requirements specified
-
-## Implementation Guidelines
-### Code Standards
-- Follow existing codebase patterns and conventions
-- Maintain minimum [X]% test coverage
-- All public APIs must be documented
-- Security-first implementation approach
-
-### Review Process
-- Technical review required for all architectural changes
-- Security review required for authentication/authorization changes
-- Performance review required for database/API changes
-- UX review required for user-facing changes
-
----
-
-*Generated by `/create-tasks` command for compatibility with `/work-on-task` TDD workflow*
+# Milestone Strategy
+- **Current Sprint**: Issues for immediate sprint
+- **Next Sprint**: Planned for upcoming sprint
+- **v[X.Y]**: Release-specific milestone
+- **Backlog**: Not yet scheduled
+- **Research**: Investigation and proof-of-concept work
 ```
 
 ---
 
-## Command Behavior Rules
+## Command Behavior & GitHub Integration
 
-### Feature Analysis Requirements
-1. **Comprehensive Scope Analysis**: Understand full feature implications
-2. **Current System Integration**: Ensure compatibility with existing architecture
-3. **Incremental Delivery**: Break down into deployable increments
-4. **Risk-First Approach**: Identify and mitigate technical risks early
+### Repository Detection & Configuration
+1. **Auto-detect Repository**: Parse git remote or use current working directory
+2. **GitHub API Integration**: Use GitHub CLI or API tokens for issue creation
+3. **Permission Validation**: Verify write access to target repository
+4. **Template Compliance**: Follow repository's issue templates if they exist
 
-### Task Quality Standards
-1. **SMART Criteria**: Specific, Measurable, Achievable, Relevant, Time-bound
-2. **TDD Compatibility**: Every task must be testable with clear acceptance criteria
-3. **Atomic Scope**: Each task should be completable in 1-3 days
-4. **Value-Driven**: Every task should deliver measurable user or business value
+### Issue Creation Process
+```
+STEP 1: Validate GitHub Access
+- Check GitHub CLI authentication
+- Verify repository permissions
+- Validate milestone and label existence
 
-### Output Validation
-1. **Syntax Validation**: Ensure markdown formatting is correct
-2. **Dependency Verification**: Check for circular or missing dependencies
-3. **Coverage Assessment**: Ensure all feature aspects are covered
-4. **Consistency Check**: Verify consistent terminology and approaches
+STEP 2: Create Epic Issue (if --epic flag)
+- Generate epic with feature overview
+- Create task checklist with placeholders
+- Apply appropriate labels and milestone
 
----
+STEP 3: Create Individual Task Issues
+- Generate each task issue with detailed specifications
+- Link to epic issue (if applicable)
+- Establish dependency relationships
+- Apply labels based on content analysis
 
-## Advanced Features
+STEP 4: Update Cross-References
+- Update epic issue with created task issue numbers
+- Add dependency links between related issues
+- Update project boards (if configured)
+```
 
-### Codebase Analysis Integration
-When `--codebase` parameter is provided:
-
+### Advanced GitHub Features
 ```markdown
-### Codebase Analysis Results
-**Files Analyzed**: [Number]
-**Languages Detected**: [List]
-**Architecture Pattern**: [MVC, Microservices, etc.]
-**Test Coverage**: [Current percentage]
+# Project Board Integration
+- Automatically add issues to project boards
+- Set appropriate status columns
+- Configure automation rules
 
-#### Existing Patterns Found
-- **Authentication**: [Current implementation]
-- **Data Access**: [ORM, patterns used]
-- **API Structure**: [REST, GraphQL, etc.]
-- **Error Handling**: [Current approach]
-- **Logging**: [Current framework]
+# Issue Templates Integration  
+- Respect existing repository issue templates
+- Merge generated content with template structure
+- Maintain repository conventions
 
-#### Recommendations
-- [Specific suggestions based on analysis]
-- [Consistency improvements needed]
-- [Technical debt opportunities]
-```
-
-### Effort Estimation
-```markdown
-### Effort Analysis
-**Total Estimated Effort**: [X story points / Y hours]
-**Team Velocity Consideration**: [Based on historical data]
-**Confidence Level**: [High/Medium/Low]
-
-#### Estimation Breakdown
-| Task Category | Tasks | Effort | Confidence |
-|---------------|-------|---------|------------|
-| Backend API | [Count] | [Points] | [Level] |
-| Frontend UI | [Count] | [Points] | [Level] |
-| Database | [Count] | [Points] | [Level] |
-| Testing | [Count] | [Points] | [Level] |
-| Documentation | [Count] | [Points] | [Level] |
-```
-
-### Integration Scenarios
-```markdown
-### Integration Considerations
-#### Deployment Strategy
-- **Blue-Green Deployment**: [Feasibility]
-- **Feature Flags**: [Requirements]
-- **Database Migrations**: [Strategy]
-- **API Versioning**: [Approach]
-
-#### Monitoring & Observability
-- **Key Metrics**: [List of KPIs to track]
-- **Alerting Rules**: [Critical thresholds]
-- **Logging Requirements**: [Structured logging needs]
-- **Performance Monitoring**: [APM requirements]
+# GitHub Actions Integration
+- Trigger workflows on issue creation
+- Auto-assign based on component labels
+- Update related documentation
 ```
 
 ---
 
-## Error Handling & Validation
+## Usage Examples with GitHub Integration
 
-### Invalid Feature Descriptions
+### Example 1: Simple Feature with Auto-Detection
+```bash
+/create-issues "Add user authentication with JWT tokens"
 ```
-❌ Error: Feature description too vague.
-Please provide specific functionality requirements.
+**GitHub Actions**:
+1. Creates Epic: "Epic: User Authentication System" 
+2. Creates 8 individual task issues:
+   - `#123: Implement JWT token generation service`
+   - `#124: Create user registration endpoint` 
+   - `#125: Add login authentication flow`
+   - `#126: Implement password reset functionality`
+   - `#127: Add role-based access control`
+   - `#128: Create authentication middleware`
+   - `#129: Implement logout and token revocation`
+   - `#130: Add authentication integration tests`
+3. **Labels Applied**: `epic`, `feature`, `priority/high`, `component/auth`
+4. **Cross-references**: Epic contains checklist of all task issues
 
-Example: "Add user authentication" → "Add JWT-based user authentication with email/password login, password reset, and role-based access control"
+### Example 2: Specific Repository and Milestone
+```bash
+/create-issues "Implement real-time notifications" --repo=myorg/backend --milestone="v2.1"
 ```
+**GitHub Actions**:
+1. Creates issues in `myorg/backend` repository
+2. Assigns all issues to "v2.1" milestone  
+3. Creates 12 task issues covering WebSocket infrastructure, message queuing, etc.
+4. **Labels Applied**: `feature`, `priority/medium`, `component/api`, `component/integration`
 
-### Conflicting Requirements
+### Example 3: Epic Creation for Large Feature
+```bash
+/create-issues "Complete checkout and payment system" --epic --milestone="Q2-2025"
 ```
-⚠️  Warning: Potential conflicts detected:
-- Requested feature conflicts with [existing component]
-- May require breaking changes to [API/database]
-- Consider alternative approach: [suggestion]
-```
-
-### File Not Accessible
-```
-❌ Error: Cannot access tasks/ directory.
-Please ensure the tasks/ directory exists and is writable.
-```
-
-### Naming Conflicts
-```
-⚠️  Warning: File 'tasks/authentication.md' already exists.
-Options:
-1. Overwrite existing file
-2. Create versioned file: 'tasks/authentication-v2.md'
-3. Append timestamp: 'tasks/authentication-2025-01-12.md'
-
-Choose option [1-3]: 
-```
-
-### Tasks Directory Setup
-```
-📁 Info: Tasks directory not found. 
-Creating tasks/ directory structure:
-- tasks/
-- tasks/completed/
-- tasks/README.md
-
-✅ Directory structure created successfully.
-```
+**GitHub Actions**:
+1. Creates Epic issue with comprehensive overview
+2. Creates 20+ individual task issues covering:
+   - Shopping cart functionality
+   - Payment provider integration  
+   - Order management system
+   - Invoice generation
+   - Refund processing
+3. **Project Board**: Adds epic to "Major Features" project
+4. **Dependencies**: Maps task dependencies and blockers
 
 ---
-
-## Best Practices & Guidelines
-
-### Feature Decomposition
-1. **Start with User Value**: Each task should provide user-visible benefit
-2. **Minimize Dependencies**: Reduce coupling between tasks where possible
-3. **Plan for Failure**: Include rollback and recovery strategies
-4. **Think Long-term**: Consider maintenance and scalability implications
-
-### Task Creation
-1. **Clear Boundaries**: Each task should have well-defined scope
-2. **Testable Outcomes**: All acceptance criteria must be verifiable
-3. **Implementation Agnostic**: Focus on "what" not "how" in acceptance criteria
-4. **Progressive Enhancement**: Plan for iterative improvement
-
-### Documentation Quality
-1. **Consistent Terminology**: Use domain-specific language consistently
-2. **Complete Context**: Provide all necessary background information
-3. **Actionable Acceptance Criteria**: Make testing requirements explicit
-4. **Future-Proof Design**: Consider extensibility and modification needs
 
 ## Integration with `/work-on-task`
 
-### Seamless Workflow Integration
-The generated task files are designed for immediate use with the `/work-on-task` command:
-
+### Modified `/work-on-task` for GitHub Issues
 ```bash
-# Generate tasks
-/create-tasks "Add user authentication with JWT tokens"
-# Output: tasks/user-authentication-2025-01-12.md
+# Work on specific GitHub issue
+/work-on-task --issue=123
+/work-on-task --issue=myorg/repo#123
 
-# Start working on specific task
-/work-on-task tasks/user-authentication-2025-01-12.md 1
-/work-on-task tasks/user-authentication-2025-01-12.md 2
+# Work on issue with local checkout
+/work-on-task --issue=123 --branch=feature/auth-jwt-tokens
 ```
 
-### Task Directory Structure
-```
-tasks/
-├── README.md                           # Index of all task files
-├── user-authentication-2025-01-12.md   # Authentication feature tasks
-├── notifications-2025-01-12.md         # Notification feature tasks
-├── theme-support-2025-01-12.md         # Theme feature tasks
-└── completed/                          # Archive for completed tasks
-    ├── payment-integration-2024-12-15.md
-    └── search-optimization-2024-12-20.md
-```
-
-### Automatic Index Updates
-When creating new task files, the command will optionally update `tasks/README.md`:
-
+### Enhanced GitHub Workflow
 ```markdown
-# Task Files Index
+# Complete Feature Development Workflow
 
-## Active Features
-- [User Authentication](./user-authentication-2025-01-12.md) - 8 tasks - Priority: High
-- [Real-time Notifications](./notifications-2025-01-12.md) - 12 tasks - Priority: Medium
-- [Dark Mode Theme](./theme-support-2025-01-12.md) - 6 tasks - Priority: Low
+1. **Feature Planning**:
+   /create-issues "Add user authentication" --epic --milestone="v2.0"
 
-## Completed Features
-- [Payment Integration](./completed/payment-integration-2024-12-15.md) - Completed: 2024-12-20
-- [Search Optimization](./completed/search-optimization-2024-12-20.md) - Completed: 2025-01-05
+2. **Implementation**:
+   /work-on-task --issue=123  # Start TDD on first task
+   
+3. **Automatic Updates**:
+   - Issue status automatically updated to "in-progress"
+   - Commits reference issue numbers
+   - PR creation links back to issues
+   
+4. **Completion Tracking**:
+   - Checkboxes in epic automatically updated
+   - Progress tracking across all related issues
+   - Milestone progress visualization
 ```
-
-### Scenario 1: Authentication Feature
-```bash
-/create-tasks "Add OAuth2 authentication with Google and GitHub providers"
-```
-**Expected Output**: 8-12 tasks covering OAuth setup, user management, session handling, security audits, and integration testing.
-
-### Scenario 2: Real-time Features
-```bash
-/create-tasks "Implement WebSocket-based chat system" --output=chat-tasks.md
-```
-**Expected Output**: 15-20 tasks covering WebSocket infrastructure, message routing, persistence, UI components, and performance optimization.
-
-### Scenario 3: Data Migration
-```bash
-/create-tasks "Migrate from MySQL to PostgreSQL" --codebase=./backend
-```
-**Expected Output**: 10-15 tasks covering schema migration, data transformation, application updates, testing, and rollback procedures.
 
 ---
 
-*This command generates production-ready task specifications optimized for TDD implementation using the `/work-on-task` workflow.*
+## Error Handling & GitHub Integration
+
+### GitHub Authentication Issues
+```
+❌ Error: GitHub authentication required.
+Please run: gh auth login
+Or set GITHUB_TOKEN environment variable.
+```
+
+### Repository Access Issues  
+```
+❌ Error: No write access to repository 'myorg/backend'.
+Please check repository permissions or specify a different repository with --repo flag.
+```
+
+### Milestone/Label Issues
+```
+⚠️  Warning: Milestone 'v2.1' not found in repository.
+Created milestone 'v2.1' with default due date.
+
+⚠️  Warning: Label 'component/auth' not found.
+Created label 'component/auth' with default color.
+```
+
+### Rate Limiting
+```
+⚠️  Warning: GitHub API rate limit approaching.
+Created 8 of 12 planned issues. Remaining 4 issues queued for retry in 60 minutes.
+Use --batch flag to queue all issues for background creation.
+```
+
+---
+
+## Advanced Features & Configuration
+
+### Repository Configuration File
+```yaml
+# .github/claude-config.yml
+issue_creation:
+  default_labels:
+    - "needs-triage"
+    - "created-by-ai"
+  
+  auto_assign:
+    component/auth: "@auth-team"
+    component/frontend: "@ui-team"
+    component/api: "@backend-team"
+  
+  project_boards:
+    epic: "Major Features"
+    task: "Development Backlog"
+  
+  milestone_strategy: "auto-create"
+  
+  templates:
+    epic: ".github/ISSUE_TEMPLATE/epic.md"
+    task: ".github/ISSUE_TEMPLATE/task.md"
+```
+
+### Batch Creation Mode
+```bash
+/create-issues "Large feature" --batch --async
+```
+**Benefits**:
+- Avoids GitHub API rate limits
+- Creates issues in background
+- Provides progress updates
+- Handles failures gracefully
+
+---
+
+## Benefits of GitHub Issues Approach
+
+### ✅ **Better Project Management**
+- **Native Integration**: Works with existing GitHub workflow
+- **Project Boards**: Automatic kanban board updates
+- **Milestone Tracking**: Built-in progress visualization
+- **Team Collaboration**: Comments, assignments, reviews
+
+### ✅ **Enhanced Visibility**
+- **Searchable History**: All tasks searchable in GitHub
+- **Cross-referencing**: Automatic linking between PRs and issues
+- **Notifications**: Team members get relevant updates
+- **Integration**: Works with existing CI/CD and automation
+
+### ✅ **Improved Workflow**
+- **Branch Linking**: Automatic branch-to-issue association
+- **PR Integration**: Pull requests automatically close issues
+- **Status Tracking**: Real-time progress on features
+- **Historical Record**: Complete audit trail of development
+
+### ✅ **Better Tooling**
+- **GitHub CLI**: Direct terminal integration
+- **API Access**: Programmatic issue management
+- **Third-party Tools**: Integration with project management tools
+- **Mobile Access**: GitHub mobile app support
+
+---
+
+*This command creates production-ready GitHub Issues optimized for team collaboration and TDD implementation using the `/work-on-task` workflow.*
