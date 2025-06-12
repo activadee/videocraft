@@ -117,9 +117,7 @@ func (g *ASSGenerator) formatASSTime(duration time.Duration) string {
 // parseColorToASS converts hex color (#RRGGBB) to ASS format (&HBBGGRR)
 func (g *ASSGenerator) parseColorToASS(hexColor string) string {
 	// Remove # prefix if present
-	if strings.HasPrefix(hexColor, "#") {
-		hexColor = hexColor[1:]
-	}
+	hexColor = strings.TrimPrefix(hexColor, "#")
 	
 	// Ensure we have 6 characters
 	if len(hexColor) != 6 {

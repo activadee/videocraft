@@ -1,16 +1,27 @@
+# golangci-lint configuration
+# Compatible with golangci-lint v1.59.x
+
 linters-settings:
   dupl:
     threshold: 100
+
   exhaustive:
     default-signifies-exhaustive: false
+
   funlen:
     lines: 100
     statements: 50
+
   gci:
-    local-prefixes: github.com/activadee/videocraft
+    sections:
+      - standard
+      - default
+      - prefix(github.com/activadee/videocraft)
+
   goconst:
     min-len: 2
     min-occurrences: 2
+
   gocritic:
     enabled-tags:
       - diagnostic
@@ -19,24 +30,26 @@ linters-settings:
       - performance
       - style
     disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
+      - dupImport
       - ifElseChain
       - octalLiteral
       - whyNoLint
       - wrapperFunc
+
   gocyclo:
     min-complexity: 15
+
   goimports:
     local-prefixes: github.com/activadee/videocraft
-  golint:
-    min-confidence: 0
-  gomnd:
+
+  mnd:
     settings:
       mnd:
-        # don't include the "operation" and "assign"
         checks: argument,case,condition,return
+
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
     settings:
       printf:
         funcs:
@@ -44,25 +57,23 @@ linters-settings:
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+
   lll:
     line-length: 140
-  maligned:
-    suggest-new: true
+
   misspell:
     locale: US
+
   nolintlint:
-    allow-leading-space: true # don't require machine-readable nolint directives (i.e. with no leading space)
-    allow-unused: false # report any unused nolint directives
-    require-explanation: false # don't require an explanation for nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+    allow-leading-space: true
+    allow-unused: false
+    require-explanation: false
+    require-specific: false
 
 linters:
-  # please, do not use `enable-all`: it's deprecated and will be removed soon.
-  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
   disable-all: true
   enable:
     - bodyclose
-    - deadcode
     - depguard
     - dogsled
     - dupl
@@ -75,66 +86,58 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - golint
-    - gomnd
+    - mnd
     - goprintffuncname
     - gosec
     - gosimple
     - govet
     - ineffassign
-    - interfacer
     - lll
     - misspell
     - nakedret
     - noctx
     - nolintlint
     - rowserrcheck
-    - scopelint
+    - exportloopref
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
-
-  # don't enable:
-  # - asciicheck
-  # - gochecknoglobals
-  # - gocognit
-  # - godot
-  # - godox
-  # - goerr113
-  # - maligned
-  # - nestif
-  # - prealloc
-  # - testpackage
-  # - wsl
+    - revive
 
 issues:
-  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-dirs:
+    - generated_videos
+    - temp
+    - whisper_cache
+    - vendor
   exclude-rules:
     - path: _test\.go
       linters:
-        - gomnd
+        - mnd
         - funlen
         - goconst
         - gocyclo
         - errcheck
         - dupl
         - gosec
-
-    # https://github.com/go-critic/go-critic/issues/926
     - linters:
         - gocritic
       text: "unnecessaryDefer:"
+    # Allow "cancelled" spelling (UK English)
+    - linters:
+        - misspell
+      text: "`cancelled` is a misspelling of `canceled`"
+    # Allow "dialogue" spelling (UK English)
+    - linters:
+        - misspell
+      text: "`dialogue` is a misspelling of `dialog`"
+    - linters:
+        - misspell
+      text: "`Dialogue` is a misspelling of `Dialog`"
 
 run:
   timeout: 5m
-  skip-dirs:
-    - generated_videos
-    - temp
-    - whisper_cache
-    - vendor

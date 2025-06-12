@@ -100,13 +100,24 @@ STEP 5: Refactor & Optimize
 
 #### Phase 5: GitHub Integration & Completion
 ```
-STEP 6: Update GitHub Issue
-- Post progress comments with implementation details
-- Update issue checkboxes as requirements are completed
-- Link commits to issue using conventional commit messages
-- Update issue labels (in-progress → review → done)
-- Request code review if implementation complete
-- Close issue when all acceptance criteria pass
+STEP 6: Final Validation & Git Integration
+- Run complete test suite and ensure all tests pass
+- Verify all acceptance criteria checkboxes completed
+- Validate code quality and standards compliance
+- Stage all changes for commit
+
+STEP 7: Commit & Push Changes
+- Generate comprehensive commit message with issue reference
+- Commit all changes with conventional commit format
+- Push feature branch to GitHub remote
+- Update issue status to "ready-for-review"
+
+STEP 8: Pull Request Creation
+- Create PR with auto-generated description
+- Link PR to original issue (auto-closes on merge)
+- Apply appropriate labels and request reviewers
+- Update issue with PR reference and completion status
+- Post final completion comment to issue
 ```
 
 ---
@@ -244,31 +255,208 @@ class FeatureName {
 **Progress**: 75% - Core functionality complete
 ```
 
-### Issue Completion & Review Request
+### 4. Final Commit & Pull Request Creation
+```markdown
+## 🚀 Implementation Complete - Creating PR
+
+### Final Commit Message
 ```
-✅ **Implementation Complete - Ready for Review**
 
-**All Acceptance Criteria Met**:
-- [X] [Criteria 1] - Tests passing
-- [X] [Criteria 2] - Tests passing  
-- [X] [Criteria 3] - Tests passing
+```bash
+git add .
+git commit -m "feat: implement JWT authentication middleware (#123)
 
-**Code Quality**:
-- [X] Test coverage: [X]%
-- [X] All existing tests still passing
-- [X] Code follows project standards
-- [X] Documentation updated
+Complete implementation of JWT token validation and role-based access control
 
-**Review Checklist**:
-- [X] Functional requirements met
-- [X] Security considerations addressed
-- [X] Performance requirements satisfied
-- [X] Error handling comprehensive
+**Features:**
+- JWT token validation middleware
+- Role-based access control (RBAC)  
+- Comprehensive error handling
+- Password reset functionality
+- Session management
 
-🔀 **Pull Request**: #[PR-number]  
+**Testing:**
+- Unit tests: 45 tests passing
+- Integration tests: 12 tests passing
+- E2E tests: 8 tests passing
+- Code coverage: 94%
+
+**Security:**
+- Input validation implemented
+- SQL injection prevention
+- XSS protection
+- Rate limiting added
+
+**Performance:**
+- Token validation: <5ms average
+- Database queries optimized
+- Caching implemented for user roles
+
+Closes #123"
+```
+
+### Pull Request Auto-Generation
+**PR Title**: `feat: implement JWT authentication middleware (#123)`
+
+**PR Description**:
+```markdown
+## 🎯 Description
+Implements comprehensive JWT authentication system as specified in Issue #123.
+
+## 📋 Implementation Summary
+### ✅ Completed Features
+- [x] JWT token generation and validation
+- [x] User registration and login endpoints
+- [x] Password reset functionality with email verification
+- [x] Role-based access control (RBAC)
+- [x] Authentication middleware for protected routes
+- [x] Logout and token revocation
+- [x] Session management and security
+
+### 🧪 Testing Coverage
+- **Unit Tests**: 45 tests (100% of new code)
+- **Integration Tests**: 12 API endpoint tests
+- **E2E Tests**: 8 user workflow tests
+- **Code Coverage**: 94% overall
+- **Security Tests**: Authentication flow validation
+
+### 🔒 Security Implementation
+- [x] Input validation and sanitization
+- [x] SQL injection prevention
+- [x] XSS protection headers
+- [x] Rate limiting on auth endpoints
+- [x] Secure password hashing (bcrypt)
+- [x] JWT token expiration and refresh
+- [x] HTTPS-only session cookies
+
+### 📊 Performance Metrics
+- Token validation: <5ms average response time
+- Login endpoint: <200ms average response time
+- Database queries optimized with proper indexing
+- Redis caching for user roles and permissions
+
+## 🔗 Related Issues
+Closes #123
+Part of Epic #100: Complete Authentication System
+
+## 🔍 Review Checklist
+- [x] All acceptance criteria implemented and tested
+- [x] Code follows project standards and conventions
+- [x] Security review completed - no vulnerabilities found
+- [x] Performance requirements met (<200ms response times)
+- [x] Error handling comprehensive and user-friendly
+- [x] Documentation updated (API docs, README)
+- [x] Database migrations tested and validated
+- [x] Backward compatibility maintained
+
+## 🧪 Testing Instructions
+### Prerequisites
+```bash
+npm install
+cp .env.example .env
+# Update .env with test database credentials
+npm run db:migrate
+```
+
+### Run Test Suite
+```bash
+# All tests
+npm test
+
+# Specific test categories
+npm run test:unit
+npm run test:integration
+npm run test:e2e
+npm run test:security
+```
+
+### Manual Testing
+1. **Registration**: POST `/api/auth/register`
+2. **Login**: POST `/api/auth/login`
+3. **Protected Route**: GET `/api/profile` (with JWT token)
+4. **Password Reset**: POST `/api/auth/reset-password`
+5. **Logout**: POST `/api/auth/logout`
+
+## 📚 Documentation Updates
+- [x] API documentation updated with new endpoints
+- [x] Authentication flow diagram added
+- [x] Security considerations documented
+- [x] Environment variable documentation updated
+- [x] Deployment guide updated with new requirements
+
+## 🚀 Deployment Notes
+### Environment Variables Required
+```env
+JWT_SECRET=your-super-secret-jwt-key
+JWT_EXPIRATION=24h
+BCRYPT_ROUNDS=12
+REDIS_URL=redis://localhost:6379
+EMAIL_SERVICE_API_KEY=your-email-service-key
+```
+
+### Database Migrations
+```bash
+# Run migrations before deployment
+npm run db:migrate
+
+# Rollback if needed
+npm run db:rollback
+```
+
+### Performance Impact
+- New endpoints add ~2ms to application startup
+- Redis dependency required for session caching
+- Database requires 3 new tables (users, roles, sessions)
+
+---
+**Ready for Review** 👥
+**Estimated Review Time**: 2-3 hours
+**Merge Target**: `main` branch
+```
+
+### GitHub CLI Commands Executed
+```bash
+# Push feature branch
+git push origin feature/issue-123-jwt-auth-middleware
+
+# Create pull request
+gh pr create \
+  --title "feat: implement JWT authentication middleware (#123)" \
+  --body-file pr-description.md \
+  --label "enhancement,security,backend" \
+  --milestone "v2.0" \
+  --assignee "@auth-team" \
+  --reviewer "@senior-dev,@security-lead"
+
+# Update original issue
+gh issue comment 123 --body "✅ **Implementation Complete**
+
+🔀 **Pull Request Created**: #$(gh pr view --json number -q .number)
 👥 **Ready for Code Review**
-**Progress**: 100% - Complete
+📊 **All Acceptance Criteria Met**
+
+**Next Steps**:
+1. Code review by assigned reviewers
+2. Security review (if required)
+3. QA testing in staging environment
+4. Merge to main and deploy
+
+**Implementation Summary**:
+- All acceptance criteria implemented and tested
+- Comprehensive test suite (94% coverage)
+- Security best practices followed
+- Performance requirements exceeded
+- Documentation updated
+
+Thank you for the clear requirements! 🎉"
 ```
+
+### Final Issue Status Update
+- **Status**: Changed from "in-progress" to "ready-for-review"
+- **Labels**: Added "ready-for-review", "awaiting-merge"
+- **Assignee**: Updated to reviewers
+- **All Checkboxes**: Marked as completed ✅
+- **PR Link**: Added to issue description
 ```
 
 ---
@@ -285,8 +473,9 @@ class FeatureName {
 ### Repository Requirements
 1. **Git Repository**: Must be in a valid git repository
 2. **GitHub Remote**: Repository must have GitHub remote configured
-3. **Authentication**: GitHub CLI authenticated or token available
-4. **Branch Permissions**: Ability to create and push branches
+3. **Authentication**: GitHub CLI authenticated with PR creation permissions
+4. **Branch Permissions**: Ability to create branches and open PRs
+5. **Clean Working State**: All changes properly staged for final commit
 
 ### Issue Format Requirements
 1. **Acceptance Criteria**: Issue must contain testable acceptance criteria
@@ -297,9 +486,11 @@ class FeatureName {
 ### TDD Enforcement Rules
 1. **Always start with failing tests**: No implementation before tests
 2. **Test every acceptance criterion**: 1:1 mapping minimum
-3. **Incremental development**: Small, focused commits
+3. **Incremental development**: Small, focused commits during development
 4. **Continuous validation**: Run tests after each change
-5. **GitHub integration**: Commit messages reference issue number
+5. **Final commit**: Single comprehensive commit with all changes
+6. **Automatic PR**: Create pull request with detailed description
+7. **Issue closure**: Link PR to issue for automatic closure on merge
 
 ---
 
@@ -315,7 +506,9 @@ class FeatureName {
 3. **Status Update**: Issue labeled "in-progress", comment posted
 4. **TDD Implementation**: Red → Green → Refactor cycle
 5. **Progress Updates**: Regular comments on issue with progress
-6. **Completion**: Issue checkboxes updated, ready for review
+6. **Final Commit**: Comprehensive commit with all changes
+7. **PR Creation**: Auto-generated PR with detailed description
+8. **Issue Update**: Final completion comment with PR link
 
 ### Scenario 2: Cross-Repository Issue
 ```bash
@@ -326,8 +519,10 @@ class FeatureName {
 2. **Issue Analysis**: Fetches issue #456 from specified repository
 3. **Local Setup**: Ensures local repo is synced with remote
 4. **Implementation**: Standard TDD workflow with cross-repo issue updates
+5. **PR Creation**: Pull request created in correct repository
+6. **Cross-Reference**: Original issue updated with PR link
 
-### Scenario 3: Custom Branch Strategy
+### Scenario 3: Custom Branch with Auto-PR
 ```bash
 /work-on-task 789 --branch=feature/auth-jwt-tokens
 ```
@@ -335,18 +530,23 @@ class FeatureName {
 1. **Custom Branch**: Creates specified branch name instead of auto-generated
 2. **Issue Linking**: Links custom branch to issue #789
 3. **Implementation**: Normal TDD workflow with custom branch
-4. **PR Creation**: Pull request from custom branch references issue
+4. **Auto-Commit**: Final commit with comprehensive message
+5. **PR Creation**: Pull request from custom branch with auto-generated description
+6. **Reviewer Assignment**: Automatic reviewer assignment based on issue labels
 
-### Scenario 4: Epic Sub-task Implementation
+### Scenario 4: Epic Sub-task with Complete Workflow
 ```bash
 /work-on-task 234
 # Where #234 is part of Epic #200
 ```
 **Expected Workflow**:
 1. **Epic Context**: Recognizes issue is part of larger epic
-2. **Epic Updates**: Updates epic progress when sub-task completed
-3. **Cross-referencing**: Maintains links between epic and sub-tasks
-4. **Milestone Tracking**: Updates milestone progress automatically
+2. **Implementation**: Standard TDD implementation
+3. **Final Commit**: Commit message references both issue and epic
+4. **PR Creation**: PR description includes epic context
+5. **Epic Updates**: Updates epic progress when PR is created
+6. **Milestone Tracking**: Updates milestone progress automatically
+7. **Team Notification**: Notifies epic stakeholders of completion
 
 ---
 
@@ -390,13 +590,38 @@ Options:
 3. Delete existing branch: git branch -D feature/issue-123-auth
 ```
 
-### GitHub API Rate Limits
+### PR Creation Failures
 ```
-⚠️  Warning: GitHub API rate limit reached.
-- Issue updates will be queued for retry
-- Local development can continue
-- Comments will be posted when rate limit resets
-- Use --offline flag to skip GitHub integration
+❌ Error: Failed to create pull request.
+Possible causes:
+- No changes to commit (all acceptance criteria already implemented)
+- Branch protection rules prevent PR creation
+- Missing required reviewers or approvals
+- GitHub API rate limit exceeded
+
+Solutions:
+- Verify changes exist: git status
+- Check branch protection: gh repo view --web
+- Retry with --force flag: /work-on-task 123 --force-pr
+```
+
+### Commit Message Generation Issues
+```
+⚠️  Warning: Unable to generate comprehensive commit message.
+Using fallback commit message format.
+
+Fallback commit:
+```
+feat: implement issue #123
+
+- Complete TDD implementation
+- All acceptance criteria met
+- Tests passing
+
+Closes #123
+```
+
+Recommendation: Review and amend commit message before push.
 ```
 
 ---
@@ -427,30 +652,44 @@ Closes #123"
 
 ### Pull Request Integration
 ```markdown
-# Auto-generated PR description
+# Auto-generated PR description template
 ## Description
-Implements GitHub Issue #123: Add JWT authentication middleware
+Implements GitHub Issue #[number]: [issue title]
 
 ## Implementation Summary
-- ✅ JWT token validation middleware
-- ✅ Role-based access control
-- ✅ Comprehensive error handling
-- ✅ Unit and integration tests
+- ✅ [Feature 1]: [Description]
+- ✅ [Feature 2]: [Description]
+- ✅ [Feature 3]: [Description]
 
 ## Testing
 - All acceptance criteria tests passing
-- Code coverage: 95%
-- Security review completed
+- Code coverage: [percentage]%
+- [Security/Performance] review completed
 
 ## Related Issues
-Closes #123
-Part of Epic #100
+Closes #[issue-number]
+Part of Epic #[epic-number] (if applicable)
 
 ## Checklist
 - [x] All tests passing
 - [x] Code review completed
 - [x] Documentation updated
 - [x] Security considerations addressed
+```
+
+### Advanced PR Features
+```bash
+# Automatic reviewer assignment based on CODEOWNERS
+gh pr create --reviewer "@team/backend,@security-lead"
+
+# Auto-assign labels based on issue labels
+gh pr create --label "enhancement,security,backend"
+
+# Link to milestone and project boards
+gh pr create --milestone "v2.0" --project "Backend Development"
+
+# Draft PR for work-in-progress (optional flag)
+/work-on-task 123 --draft-pr
 ```
 
 ### Framework Support
@@ -477,12 +716,33 @@ Part of Epic #100
 4. **Atomic Commits**: Each commit should reference the issue number
 5. **Quality Gates**: Ensure all acceptance criteria pass before completion
 
-### TDD with GitHub Integration
-1. **Test First**: Write failing tests before any implementation
-2. **Commit Frequently**: Small commits with clear messages
-3. **Issue Updates**: Update checkboxes as requirements are completed
-4. **Review Ready**: Mark issue ready for review when all criteria met
-5. **Documentation**: Update issue with implementation notes and decisions
+### Complete Workflow Integration
+1. **Implementation Phase**: TDD cycle with incremental commits
+2. **Final Validation**: Comprehensive test suite and acceptance criteria check
+3. **Code Consolidation**: Stage all changes for single comprehensive commit
+4. **Commit Creation**: Generate detailed commit message with conventional format
+5. **Branch Push**: Push feature branch to GitHub remote
+6. **PR Generation**: Create pull request with auto-generated description
+7. **Issue Completion**: Update original issue with PR link and completion status
+8. **Team Notification**: Notify relevant team members and reviewers
+
+### Automated Quality Gates
+1. **Test Coverage**: Ensure minimum coverage threshold met
+2. **Security Scan**: Run security linting and vulnerability checks  
+3. **Code Standards**: Validate code formatting and conventions
+4. **Documentation**: Verify API docs and README updates completed
+5. **Performance**: Run performance benchmarks if applicable
+
+### Post-Implementation Automation
+```bash
+# Automatic actions after PR creation
+- Issue status updated to "ready-for-review"
+- Epic progress updated (if sub-task)
+- Milestone progress calculated
+- Team notifications sent
+- CI/CD pipeline triggered
+- Code quality reports generated
+```
 
 ### Code Quality & Collaboration
 1. **Clear Communication**: Detailed progress comments for team visibility

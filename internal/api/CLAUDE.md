@@ -6,7 +6,7 @@ The `internal/api` package implements the HTTP API layer for VideoCraft, providi
 
 ## Architecture
 
-```
+```text
 internal/api/
 ├── router.go           # Main router configuration
 ├── handlers/           # Request handlers
