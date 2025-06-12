@@ -1,0 +1,180 @@
+# Claude Code Action Configuration for VideoCraft
+# This file configures the Claude AI integration for documentation review
+
+# Global settings
+settings:
+  model: "claude-sonnet-4-20250514"  # Latest Claude model
+  max_tokens: 4000
+  temperature: 0.1  # Low temperature for consistent, factual reviews
+  
+# Documentation review specific configuration
+documentation:
+  # File patterns to monitor for documentation changes
+  watch_patterns:
+    - "*.md"
+    - "docs/**"
+    - "**/CLAUDE.md"
+    - "README.md"
+    - "CHANGELOG.md"
+    - "security-first.md"
+    
+  # Code patterns that might require documentation updates
+  code_patterns:
+    - "internal/**/*.go"
+    - "pkg/**/*.go" 
+    - "cmd/**/*.go"
+    - "scripts/**/*.py"
+    - "config/*.yaml"
+    - "Dockerfile"
+    - "docker-compose.yml"
+    
+  # Key documentation files and their purposes
+  critical_docs:
+    "README.md":
+      purpose: "Main project documentation and getting started guide"
+      review_focus: ["setup instructions", "usage examples", "feature overview"]
+      
+    "CLAUDE.md":
+      purpose: "Technical architecture and development documentation"
+      review_focus: ["architectural accuracy", "code examples", "technical details"]
+      
+    "internal/api/CLAUDE.md":
+      purpose: "API documentation and endpoint reference"
+      review_focus: ["endpoint accuracy", "request/response examples", "authentication"]
+      
+    "internal/services/CLAUDE.md":
+      purpose: "Business logic and service documentation"
+      review_focus: ["service interfaces", "business logic", "integration patterns"]
+      
+    "scripts/CLAUDE.md":
+      purpose: "Python integration and Whisper daemon documentation"
+      review_focus: ["python-go integration", "dependency management", "configuration"]
+      
+    "security-first.md":
+      purpose: "Security requirements and vulnerability tracking"
+      review_focus: ["security accuracy", "vulnerability status", "compliance"]
+
+# Review criteria and quality standards
+quality_standards:
+  # Documentation completeness criteria
+  completeness:
+    - "All public APIs are documented"
+    - "Configuration options are explained"
+    - "Examples are provided for complex features"
+    - "Security considerations are addressed"
+    - "Deployment instructions are complete"
+    
+  # Technical accuracy criteria  
+  accuracy:
+    - "Code examples compile and run"
+    - "API endpoints match implementation"
+    - "Configuration examples are valid"
+    - "Version information is current"
+    - "Dependencies are correctly listed"
+    
+  # Consistency criteria
+  consistency:
+    - "Terminology is used consistently"
+    - "Code style matches project standards"
+    - "Documentation structure follows patterns"
+    - "Cross-references are accurate"
+    - "Formatting is consistent"
+
+# VideoCraft-specific review areas
+videocraft_specific:
+  # Progressive subtitles system
+  progressive_subtitles:
+    focus_areas:
+      - "Word-level timing explanation"
+      - "Scene-based timing calculations" 
+      - "ASS subtitle generation"
+      - "Python-Go integration for transcription"
+    critical_accuracy:
+      - "Timing algorithm explanations"
+      - "Whisper daemon communication"
+      - "Audio duration vs speech duration"
+      
+  # Security documentation
+  security:
+    focus_areas:
+      - "Authentication configuration"
+      - "SSL/TLS setup"
+      - "Container security"
+      - "Input validation"
+      - "Rate limiting"
+    compliance_checks:
+      - "Vulnerability disclosure process"
+      - "Security best practices"
+      - "Configuration hardening"
+      
+  # API documentation
+  api:
+    focus_areas:
+      - "Video generation endpoints"
+      - "Job management endpoints"
+      - "Authentication requirements"
+      - "Error handling"
+    validation_checks:
+      - "Request/response examples"
+      - "Parameter documentation"
+      - "Rate limiting documentation"
+
+# Automated suggestions configuration
+suggestions:
+  # When to create GitHub issues for documentation updates
+  create_issues_for:
+    - "Missing API documentation"
+    - "Outdated security information"
+    - "Broken links or references"
+    - "Inconsistent terminology"
+    - "Missing configuration examples"
+    
+  # Automatic fixes that can be suggested
+  auto_suggestions:
+    - "Fix markdown formatting"
+    - "Update version numbers"
+    - "Correct spelling and grammar"
+    - "Standardize code block languages"
+    - "Update table of contents"
+    
+# Integration settings
+integration:
+  # GitHub integration
+  github:
+    comment_style: "detailed"  # detailed, summary, or minimal
+    update_frequency: "on_change"  # on_change, daily, weekly
+    create_discussions: true
+    
+  # Notification settings
+  notifications:
+    slack_webhook: false  # Set to webhook URL if desired
+    email_reports: false
+    
+# Custom prompts for specific scenarios
+custom_prompts:
+  new_feature_documentation:
+    prompt: |
+      A new feature has been added to VideoCraft. Please ensure:
+      1. The feature is documented in the appropriate CLAUDE.md file
+      2. Usage examples are provided
+      3. API changes are reflected in documentation
+      4. Security implications are addressed
+      5. Configuration options are documented
+      
+  security_update_documentation:
+    prompt: |
+      A security-related change was made. Please verify:
+      1. Security documentation is updated
+      2. Configuration examples reflect secure defaults
+      3. Migration instructions are provided if needed
+      4. security-first.md is updated if vulnerabilities were fixed
+      5. Deployment documentation includes security considerations
+      
+  api_change_documentation:
+    prompt: |
+      API changes were detected. Please check:
+      1. All endpoints are documented in internal/api/CLAUDE.md
+      2. Request/response examples are current
+      3. Authentication requirements are clear
+      4. Error responses are documented
+      5. Breaking changes are highlighted

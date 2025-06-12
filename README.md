@@ -22,6 +22,7 @@ VideoCraft is a high-performance Go-based video generation platform that creates
 - **Async job processing**: Background video generation with progress tracking
 - **RESTful API**: Comprehensive HTTP API with authentication and rate limiting
 - **Container-ready**: Docker and Kubernetes deployment support
+- **AI-powered documentation**: Automated documentation review with Claude AI integration
 
 ### ⚡ High Performance
 - **Concurrent processing**: Parallel audio analysis and transcription
@@ -327,6 +328,23 @@ ffprobe "your-audio-url"
 - Decrease concurrent job limits
 - Implement file cleanup policies
 
+## AI-Powered Documentation
+
+VideoCraft includes an AI-powered documentation review system using Claude AI to ensure high-quality, accurate documentation.
+
+### Features
+- **Automatic Review**: Documentation changes are automatically reviewed on commits to main
+- **Code-Docs Sync**: Detects when code changes require documentation updates
+- **Security Focus**: Special attention to security-related documentation
+- **Quality Standards**: Ensures consistency, accuracy, and completeness
+
+### Setup
+1. Add `ANTHROPIC_API_KEY` to repository secrets (for API-based integration)
+2. Or install the Claude GitHub app (for OAuth integration)
+3. The workflow automatically triggers on documentation or code changes
+
+See [Claude Integration Guide](.github/CLAUDE_INTEGRATION.md) for detailed setup instructions.
+
 ## Contributing
 
 1. Fork the repository
@@ -340,6 +358,7 @@ ffprobe "your-audio-url"
 - Add unit tests for new functionality
 - Update documentation for API changes
 - Use conventional commit messages
+- Documentation changes trigger AI review for quality assurance
 
 ## License
 

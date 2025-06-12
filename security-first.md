@@ -4,13 +4,6 @@
 
 ### P0 - Critical Security Fixes (Must Complete Immediately)
 
-- [ ] **C-001: Fix Command Injection in FFmpeg Service** 
-  - File: `internal/services/ffmpeg_service.go:134-137`
-  - Action: Implement strict URL validation and input sanitization
-  - Risk: Remote code execution
-  - Owner: Backend Team
-  - Deadline: Day 3
-
 - [ ] **C-002: Enable SSL Certificate Verification**
   - File: `scripts/whisper_daemon.py:147-150`
   - Action: Remove SSL bypass and implement proper certificate validation
