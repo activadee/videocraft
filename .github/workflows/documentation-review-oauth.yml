@@ -26,6 +26,7 @@ permissions:
   checks: write
   actions: write
   statuses: write
+  id-token: write
 jobs:
   auto-fix-documentation:
     runs-on: ubuntu-latest
