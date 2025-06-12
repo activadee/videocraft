@@ -98,7 +98,7 @@ jobs:
         name: codecov-umbrella
         
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-reports-go${{ matrix.go-version }}
         path: |
@@ -146,7 +146,7 @@ jobs:
         go test -bench=. -benchmem -run=^$ ./... | tee benchmark.txt
         
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: benchmark-results
         path: benchmark.txt
