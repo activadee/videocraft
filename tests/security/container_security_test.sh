@@ -3,7 +3,8 @@
 # Container Security Test Suite
 # Tests for Issue #13: Enforce Container Security Context
 
-set -e
+# Note: set -e is commented out to allow all tests to run and generate complete PASS/FAIL summary
+# set -e
 
 TEST_IMAGE="videocraft:security-test"
 TEST_CONTAINER="videocraft-security-test"
