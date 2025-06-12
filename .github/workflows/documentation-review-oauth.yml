@@ -205,7 +205,6 @@ jobs:
 
             **Start by examining the changed files and their diff, then make necessary edits.**
 
-          include_diff: true
           model: "claude-sonnet-4-20250514"
 
       - name: Check for documentation updates
@@ -394,7 +393,6 @@ jobs:
 
             **This is critical - documentation must be complete and accurate before merge.**
 
-          include_diff: true
           model: "claude-sonnet-4-20250514"
 
       - name: Check for critical updates
