@@ -23,7 +23,8 @@ This slash command performs comprehensive feature analysis and creates GitHub Is
 3. **Create** structured Issues with labels, milestones, and task lists
 4. **Link** related Issues and establish proper dependencies
 5. **Generate** an Epic Issue (optional) to track overall feature progress
-6. **Apply** consistent labeling and project management metadata
+6. **Link** All Issues to the Epic issues so they have the epic as parent. 
+7. **Apply** consistent labeling and project management metadata
 
 ---
 
