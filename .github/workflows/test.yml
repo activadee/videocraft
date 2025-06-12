@@ -10,10 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        go-version: [1.23, 1.24]
-    
     services:
       redis:
         image: redis
@@ -24,10 +20,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up Go ${{ matrix.go-version }}
+    - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: ${{ matrix.go-version }}
+        go-version: 1.24
         
     - name: Cache Go modules
       uses: actions/cache@v4
@@ -35,9 +31,9 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-${{ matrix.go-version }}-
+          ${{ runner.os }}-go-
           
     - name: Install dependencies
       run: go mod download
@@ -102,7 +98,7 @@ jobs:
     - name: Upload coverage reports
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-reports-go${{ matrix.go-version }}
+        name: coverage-reports
         path: |
           coverage.out
           coverage.html
@@ -176,3 +172,4 @@ jobs:
       run: |
         docker-compose -f docker-compose.yml build
         docker-compose -f docker-compose.yml config
+
