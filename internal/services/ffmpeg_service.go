@@ -29,7 +29,7 @@ type ffmpegService struct {
 func (s *ffmpegService) GenerateVideo(ctx context.Context, config *models.VideoConfigArray, progressChan chan<- int) (string, error) {
 	s.log.Info("Starting video generation")
 
-	// Build FFmpeg command with optional subtitles
+	// Build FFmpeg command with optional subtitles (includes security validation)
 	cmd, err := s.BuildCommandWithSubtitles(ctx, config)
 	if err != nil {
 		return "", errors.FFmpegFailed(fmt.Errorf("failed to build command: %w", err))
@@ -68,6 +68,11 @@ func (s *ffmpegService) BuildCommandWithSubtitles(ctx context.Context, config *m
 		return nil, fmt.Errorf("no video projects provided")
 	}
 
+	// Security validation: Check all URLs in configuration
+	if err := s.validateAllURLsInConfig(config); err != nil {
+		return nil, fmt.Errorf("security validation failed: %w", err)
+	}
+
 	project := (*config)[0]
 	
 	// Generate subtitles if enabled and subtitle element exists
@@ -99,6 +104,11 @@ func (s *ffmpegService) BuildCommandWithSubtitles(ctx context.Context, config *m
 func (s *ffmpegService) BuildCommand(config *models.VideoConfigArray) (*FFmpegCommand, error) {
 	if len(*config) == 0 {
 		return nil, fmt.Errorf("no video projects provided")
+	}
+
+	// Security validation: Check all URLs in configuration
+	if err := s.validateAllURLsInConfig(config); err != nil {
+		return nil, fmt.Errorf("security validation failed: %w", err)
 	}
 
 	// For now, process the first project in the array

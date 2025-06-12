@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -96,9 +97,10 @@ type LogConfig struct {
 }
 
 type SecurityConfig struct {
-	APIKey     string `mapstructure:"api_key"`
-	RateLimit  int    `mapstructure:"rate_limit"`
-	EnableAuth bool   `mapstructure:"enable_auth"`
+	APIKey         string   `mapstructure:"api_key"`
+	RateLimit      int      `mapstructure:"rate_limit"`
+	EnableAuth     bool     `mapstructure:"enable_auth"`
+	AllowedDomains []string `mapstructure:"allowed_domains"`
 }
 
 func Load() (*Config, error) {
@@ -114,6 +116,10 @@ func Load() (*Config, error) {
 	// Environment variables
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("VIDEOCRAFT")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	
+	// Manual bindings for complex types
+	viper.BindEnv("security.allowed_domains", "VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS")
 
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
@@ -184,4 +190,5 @@ func setDefaults() {
 	// Security defaults
 	viper.SetDefault("security.rate_limit", 100)
 	viper.SetDefault("security.enable_auth", false)
+	viper.SetDefault("security.allowed_domains", []string{})
 }

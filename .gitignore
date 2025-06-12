@@ -13,6 +13,12 @@ coverage.html
 # Generated content
 generated_videos/
 temp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 whisper_cache/
 
 # Logs
