@@ -1,9 +1,10 @@
-name: Documentation Review (OAuth)
+name: Auto-Fix Documentation
 
-# Alternative workflow using Claude OAuth for Claude Max subscribers
-# This version uses the GitHub app integration instead of API keys
+# Automated documentation improvement workflow
+# Directly makes commits to main with fixes
 
 on:
+  pull_request:
   push:
     branches: [main]
     paths:
@@ -20,202 +21,274 @@ on:
   workflow_dispatch:  # Allow manual triggers
 
 jobs:
-  claude-documentation-review:
+  auto-fix-documentation:
     runs-on: ubuntu-latest
-    if: github.event.head_commit.message != null
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     
     permissions:
-      contents: read
-      issues: write
-      pull-requests: write
+      contents: write
+      pull-requests: read
       
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 2
           
-      - name: Documentation Quality Review
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Documentation Bot"
+          
+      - name: Review and Fix Documentation
+        id: claude-review
         uses: grll/claude-code-action@beta
         with:
-          # OAuth-based authentication (requires Claude GitHub app installation)
           use_oauth: true
           claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
           claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
           claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
           timeout_minutes: "60"
           
-          # Comprehensive documentation review prompt
           direct_prompt: |
-            🔍 **VideoCraft Documentation Review**
+            🤖 **VideoCraft Documentation Auto-Fix**
             
-            I'm reviewing documentation changes in the VideoCraft video generation platform. Please analyze:
+            I need you to review and automatically fix documentation issues in the VideoCraft video generation platform.
             
-            ## 📋 Review Criteria
+            ## 🎯 **Auto-Fix Tasks**
             
-            ### 1. **Technical Accuracy**
-            - Verify code examples compile and work correctly
-            - Check API endpoint documentation matches implementation
-            - Validate configuration examples are syntactically correct
-            - Ensure version numbers and dependencies are current
+            ### 1. **Formatting Fixes** (Apply immediately)
+            - Fix markdown syntax errors
+            - Add missing code block language tags
+            - Correct heading levels and hierarchy
+            - Fix broken internal links
+            - Standardize bullet point formatting
+            - Remove trailing whitespace
+            - Ensure consistent line endings
             
-            ### 2. **VideoCraft-Specific Areas**
+            ### 2. **Content Corrections** (Apply immediately)
+            - Fix spelling and grammar errors
+            - Correct obvious typos
+            - Update outdated version numbers in examples
+            - Fix broken external links where possible
+            - Standardize terminology usage
+            - Correct code syntax in examples
             
-            **Progressive Subtitles System:**
-            - Word-level timing explanations are accurate
-            - Scene-based timing calculations are correct
-            - ASS subtitle generation process is well documented
-            - Python-Go integration details are complete
+            ### 3. **VideoCraft-Specific Fixes**
+            - Ensure API endpoint URLs match current implementation
+            - Verify configuration examples are syntactically correct
+            - Update Docker commands to match current Dockerfile
+            - Fix Python import statements in examples
+            - Correct Go package names and imports
+            - Update environment variable names to match current config
             
-            **Security Documentation:**
-            - Authentication setup is clearly explained
-            - SSL/TLS configuration is accurate
-            - Container security settings are documented
-            - Input validation guidelines are comprehensive
+            ### 4. **Cross-Reference Updates**
+            - Update links between CLAUDE.md files
+            - Ensure README.md reflects current features
+            - Sync version numbers across all docs
+            - Update changelog format consistency
             
-            **API Documentation:**
-            - All endpoints in `internal/api/` are documented
-            - Request/response examples are current and valid
-            - Authentication requirements are clear
-            - Error responses are properly documented
+            ## 📝 **Instructions**
             
-            ### 3. **Documentation Quality**
-            - Clear, concise writing
-            - Proper markdown formatting
-            - Working links and references
-            - Consistent terminology usage
-            - Appropriate code highlighting
+            **IMPORTANT: You must actually edit the files, not just suggest changes.**
             
-            ### 4. **Completeness Check**
-            - New features have corresponding documentation
-            - Configuration options are explained
-            - Security implications are addressed
-            - Deployment instructions are complete
-            - Examples are provided for complex features
+            1. **Read all documentation files thoroughly**
+            2. **Identify issues that can be automatically fixed**
+            3. **Make the actual file edits using available tools**
+            4. **Focus on safe, obvious improvements only**
+            5. **Do not change technical content without verification**
             
-            ## 🎯 Key Files to Cross-Reference
+            ## 🚫 **Do NOT Fix** (Leave for manual review)
+            - Complex technical explanations that need verification
+            - API documentation that might not match implementation
+            - Security-related content
+            - Architecture decisions or design explanations
+            - Code examples that might break functionality
             
-            - `README.md` - Main project documentation
-            - `CLAUDE.md` - Technical architecture docs
-            - `internal/api/CLAUDE.md` - API reference
-            - `internal/services/CLAUDE.md` - Service documentation
-            - `scripts/CLAUDE.md` - Python integration
-            - `security-first.md` - Security requirements
+            ## ✅ **Safe to Fix Automatically**
+            - Markdown formatting issues
+            - Obvious typos and grammar errors
+            - Broken internal file links
+            - Missing code highlighting
+            - Inconsistent heading styles
+            - Trailing whitespace
+            - Simple URL updates
             
-            ## 📝 Review Output Format
+            **Start by reading the key files, then make necessary edits:**
             
-            Provide feedback in this structure:
+            - `README.md`
+            - `CLAUDE.md` 
+            - `CHANGELOG.md`
+            - `internal/*/CLAUDE.md`
+            - `scripts/CLAUDE.md`
+            - `security-first.md`
             
-            ### ✅ **What's Good**
-            - List positive aspects of the documentation
+            After making fixes, provide a summary of what was changed.
             
-            ### ⚠️ **Issues Found**
-            - Specific problems with line numbers/files when possible
-            - Technical inaccuracies
-            - Missing information
-            - Broken links or references
-            
-            ### 🚀 **Improvement Suggestions**
-            - Specific, actionable recommendations
-            - Additional examples that would be helpful
-            - Areas where more detail is needed
-            
-            ### 🔄 **Sync Check**
-            - Whether documentation matches current code
-            - Any code changes that need documentation updates
-            
-            ## 🎖️ **Quality Score**
-            Rate the overall documentation quality (1-10) and justify the score.
-            
-            ---
-            
-            Please be thorough but constructive. Focus on helping maintain VideoCraft's high documentation standards.
-            
-          # Advanced configuration
           model: "claude-sonnet-4-20250514"
-
-      - name: Check for Critical Documentation Issues
-        uses: grll/claude-code-action@beta
-        if: contains(github.event.head_commit.message, 'security') || contains(github.event.head_commit.message, 'api') || contains(github.event.head_commit.message, 'breaking')
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           
-          direct_prompt: |
-            🚨 **Critical Documentation Sync Check**
-            
-            A potentially critical commit was detected (security/API/breaking change).
-            
-            Please perform an urgent review focusing on:
-            
-            ### 🔒 **Security Documentation**
-            If security-related:
-            - Are security configurations updated?
-            - Are vulnerability fixes documented?
-            - Are secure defaults explained?
-            - Is the security-first.md file updated?
-            
-            ### 🔌 **API Documentation** 
-            If API-related:
-            - Are new/changed endpoints documented?
-            - Are request/response examples updated?
-            - Are authentication requirements current?
-            - Are breaking changes highlighted?
-            
-            ### 💥 **Breaking Changes**
-            If breaking changes:
-            - Are migration instructions provided?
-            - Are deprecation notices clear?
-            - Are version compatibility notes updated?
-            - Are upgrade paths documented?
-            
-            **Flag any critical documentation gaps that could impact users.**
-            
-          include_diff: true
-          model: 'claude-sonnet-4-20250514'
+      - name: Check for changes
+        id: verify-changes
+        run: |
+          if git diff --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No documentation changes were made"
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "Documentation changes detected:"
+            git diff --name-only
+            git diff --stat
+          fi
+          
+      - name: Commit and push fixes
+        if: steps.verify-changes.outputs.changes == 'true'
+        run: |
+          git add -A
+          git commit -m "docs: auto-fix documentation issues [skip ci]
+          
+          🤖 Automated documentation improvements:
+          - Fixed markdown formatting issues
+          - Corrected spelling and grammar
+          - Updated broken links
+          - Standardized code highlighting
+          - Improved consistency across files
+          
+          Generated by GitHub Actions Documentation Bot"
+          
+          git push origin main
 
-  documentation-suggestions:
+  critical-sync-check:
     runs-on: ubuntu-latest
-    needs: claude-documentation-review
-    if: always()  # Run even if previous job fails
+    if: contains(github.event.head_commit.message, 'security') || contains(github.event.head_commit.message, 'api') || contains(github.event.head_commit.message, 'breaking')
     
+    permissions:
+      contents: write
+      issues: write
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Generate Documentation Improvement Suggestions
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Documentation Bot"
+          
+      - name: Critical Documentation Sync
         uses: grll/claude-code-action@beta
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_oauth: true
+          claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
+          claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
+          claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
           
           direct_prompt: |
-            📈 **Documentation Enhancement Suggestions**
+            🚨 **CRITICAL: Documentation Sync Required** 
             
-            Based on the current VideoCraft documentation, suggest specific improvements:
+            A critical commit was detected (security/API/breaking change). 
+            I need you to immediately check and update documentation.
             
-            ### 🎯 **Quick Wins** (Easy improvements)
-            - Formatting fixes
-            - Missing code block language specifications
-            - Broken internal links
-            - Spelling/grammar corrections
+            ## 🔍 **Required Checks & Fixes**
             
-            ### 📚 **Content Enhancements** (Medium effort)
-            - Additional examples that would be helpful
-            - Areas where more detail would improve understanding
-            - Cross-references that should be added
-            - Clarifications for complex concepts
+            ### 🔒 **Security Changes**
+            If security-related commit:
+            - Update `security-first.md` with new requirements
+            - Add security notices to README.md
+            - Update configuration examples with secure defaults
+            - Document any new environment variables
+            - Add migration notes for security updates
             
-            ### 🏗️ **Structural Improvements** (Larger effort)
-            - Documentation organization suggestions
-            - New sections that would be valuable
-            - Better integration between different docs
-            - User journey improvements
+            ### 🔌 **API Changes** 
+            If API-related commit:
+            - Update API documentation in `internal/api/CLAUDE.md`
+            - Add/update endpoint examples
+            - Update authentication requirements
+            - Document request/response format changes
+            - Add version compatibility notes
             
-            ### 🔍 **Missing Documentation** (Critical gaps)
-            - Undocumented features
-            - Missing configuration options
-            - Incomplete API coverage
-            - Security gaps
+            ### 💥 **Breaking Changes**
+            If breaking changes:
+            - Add prominent breaking change notices
+            - Create migration instructions
+            - Update version compatibility matrix
+            - Add deprecation warnings
+            - Document upgrade path clearly
             
-            **Format as actionable GitHub issues that could be created.**
+            ## 📝 **Action Required**
             
-          model: "claude-4-sonnet-20241022"
+            **You MUST make the actual documentation updates, not just suggestions.**
+            
+            1. **Analyze the recent commits** to understand what changed
+            2. **Identify all documentation that needs updates**
+            3. **Make the necessary file edits immediately**
+            4. **Ensure critical information is prominently displayed**
+            5. **Add clear upgrade/migration instructions**
+            
+            **Focus on user safety and clarity. Critical changes must be documented immediately.**
+            
+          include_diff: true
+          model: 'claude-sonnet-4-20250514'
+          
+      - name: Check for critical updates
+        id: check-critical
+        run: |
+          if git diff --quiet; then
+            echo "critical_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "critical_changes=true" >> $GITHUB_OUTPUT
+            echo "Critical documentation updates made:"
+            git diff --name-only
+          fi
+          
+      - name: Commit critical documentation updates
+        if: steps.check-critical.outputs.critical_changes == 'true'
+        run: |
+          git add -A
+          git commit -m "docs: critical documentation sync [skip ci]
+          
+          🚨 CRITICAL: Updated documentation for recent changes
+          - Security/API/Breaking change documentation updated
+          - Added migration instructions
+          - Updated configuration examples
+          - Added compatibility notes
+          
+          Generated by GitHub Actions (Critical Sync)"
+          
+          git push origin main
+          
+      - name: Create issue for manual review
+        if: steps.check-critical.outputs.critical_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Critical Documentation Updated - Manual Review Required',
+              body: `## Critical Documentation Changes Made
+              
+              The documentation bot automatically updated critical documentation due to recent security/API/breaking changes.
+              
+              **Please manually review these changes:**
+              
+              - [ ] Verify technical accuracy of updates
+              - [ ] Ensure security implications are properly documented  
+              - [ ] Confirm API documentation matches implementation
+              - [ ] Review migration instructions for completeness
+              - [ ] Test any updated code examples
+              
+              **Recent commits that triggered this:**
+              ${context.payload.head_commit.message}
+              
+              **Files potentially updated:**
+              - README.md
+              - security-first.md
+              - internal/api/CLAUDE.md
+              - CHANGELOG.md
+              
+              Generated by GitHub Actions Documentation Bot`,
+              labels: ['documentation', 'critical', 'needs-review']
+            })
