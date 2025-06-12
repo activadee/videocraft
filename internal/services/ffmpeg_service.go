@@ -101,6 +101,11 @@ func (s *ffmpegService) BuildCommand(config *models.VideoConfigArray) (*FFmpegCo
 		return nil, fmt.Errorf("no video projects provided")
 	}
 
+	// Security validation: Check all URLs in configuration
+	if err := s.validateAllURLsInConfig(config); err != nil {
+		return nil, fmt.Errorf("security validation failed: %w", err)
+	}
+
 	// For now, process the first project in the array
 	project := (*config)[0]
 	

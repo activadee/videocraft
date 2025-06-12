@@ -96,9 +96,10 @@ type LogConfig struct {
 }
 
 type SecurityConfig struct {
-	APIKey     string `mapstructure:"api_key"`
-	RateLimit  int    `mapstructure:"rate_limit"`
-	EnableAuth bool   `mapstructure:"enable_auth"`
+	APIKey         string   `mapstructure:"api_key"`
+	RateLimit      int      `mapstructure:"rate_limit"`
+	EnableAuth     bool     `mapstructure:"enable_auth"`
+	AllowedDomains []string `mapstructure:"allowed_domains"`
 }
 
 func Load() (*Config, error) {
