@@ -13,6 +13,7 @@ import traceback
 from typing import Dict, Any, Optional
 import logging
 import warnings
+from url_validator import URLValidator, SSRFError
 
 # Suppress FP16 warnings that interfere with JSON communication
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU.*")
@@ -43,13 +44,14 @@ debug_logger.setLevel(logging.INFO)
 class WhisperDaemon:
     """Whisper transcription daemon with idle timeout"""
     
-    def __init__(self, idle_timeout: int = 300, model_name: str = "base"):
+    def __init__(self, idle_timeout: int = 300, model_name: str = "base", allowed_domains: Optional[list] = None):
         """
         Initialize Whisper daemon
         
         Args:
             idle_timeout: Seconds to wait before auto-shutdown (default 5 minutes)
             model_name: Whisper model to use (tiny/base/small/medium/large)
+            allowed_domains: Optional list of allowed domains for URL allowlisting
         """
         self.idle_timeout = idle_timeout
         self.model_name = model_name
@@ -58,6 +60,9 @@ class WhisperDaemon:
         self.last_activity = time.time()
         self.running = True
         self.shutdown_event = threading.Event()
+        
+        # Initialize URL validator for SSRF protection
+        self.url_validator = URLValidator(allowed_domains=allowed_domains, request_timeout=30)
         
         # Start idle checker thread
         self.idle_thread = threading.Thread(target=self._idle_checker, daemon=True)
@@ -138,6 +143,15 @@ class WhisperDaemon:
             if not audio_url:
                 raise ValueError("Missing 'url' parameter")
             
+            # Validate URL for SSRF protection
+            try:
+                self.url_validator.validate_url(audio_url)
+                debug_logger.info(f"URL validation passed for: {audio_url}")
+            except SSRFError as e:
+                # Log security violation
+                logger.error(f"SECURITY: SSRF attempt blocked for URL: {audio_url} - {e}")
+                raise ValueError(f"URL validation failed: {e}")
+            
             # Download and transcribe audio
             import tempfile
             import urllib.request
@@ -158,9 +172,9 @@ class WhisperDaemon:
             # Download audio to temporary file
             with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_file:
                 try:
-                    # Use urllib with SSL context
+                    # Use urllib with SSL context and timeout
                     req = urllib.request.Request(audio_url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(req, context=ssl_context) as response:
+                    with urllib.request.urlopen(req, context=ssl_context, timeout=self.url_validator.request_timeout) as response:
                         temp_file.write(response.read())
                     
                     temp_path = temp_file.name
