@@ -1,11 +1,11 @@
-name: Documentation Review
+name: Documentation Review (OAuth)
 
-# Enhanced AI-powered documentation review with performance optimizations,
-# intelligent caching, skip CI support, and resilience patterns
+# Alternative workflow using Claude OAuth for Claude Max subscribers
+# This version uses the GitHub app integration instead of API keys
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - '**.md'
       - 'docs/**'
@@ -17,516 +17,205 @@ on:
       - 'pkg/**/*.go'
       - 'cmd/**/*.go'
       - 'scripts/**/*.py'
-  pull_request:
-    paths:
-      - '**.md'
-      - 'docs/**'
-  workflow_dispatch:
-    inputs:
-      force_full_review:
-        description: 'Force full review even if cache exists'
-        required: false
-        default: false
-        type: boolean
-
-env:
-  CACHE_VERSION: v2
-  AI_CACHE_KEY_PREFIX: ai-responses-videocraft
+  workflow_dispatch:  # Allow manual triggers
 
 jobs:
-  # Pre-flight checks and matrix generation
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.skip-check.outputs.should_skip }}
-      doc_matrix: ${{ steps.matrix.outputs.doc_matrix }}
-      review_type: ${{ steps.analysis.outputs.review_type }}
-      cache_key: ${{ steps.cache-key.outputs.cache_key }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Skip CI Check
-        id: skip-check
-        run: |
-          # Check for skip patterns
-          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
-          AUTHOR="${{ github.event.head_commit.author.email || github.actor }}"
-          
-          if [[ "$COMMIT_MSG" =~ \[(skip ci|ci skip|no ci|skip review)\] ]] || \
-             [[ "$AUTHOR" == *"bot"* ]] || \
-             [[ "${{ github.actor }}" == "github-actions[bot]" ]]; then
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-            echo "🚫 Skipping CI: $COMMIT_MSG"
-          else
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-            echo "✅ Proceeding with review"
-          fi
-
-      - name: Detect changed files
-        if: steps.skip-check.outputs.should_skip != 'true'
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            docs:
-              - 'docs/**/*.md'
-              - 'README.md'
-              - 'CHANGELOG.md'
-            critical:
-              - 'security-first.md'
-              - 'internal/api/CLAUDE.md'
-              - 'CLAUDE.md'
-            code:
-              - 'internal/**/*.go'
-              - 'pkg/**/*.go'
-              - 'cmd/**/*.go'
-              - 'scripts/**/*.py'
-
-      - name: Generate documentation matrix
-        if: steps.skip-check.outputs.should_skip != 'true' && steps.changes.outputs.docs == 'true'
-        id: matrix
-        run: |
-          # Group files for parallel processing
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E '\.(md)$' || echo "")
-          
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "doc_matrix=[]" >> $GITHUB_OUTPUT
-          else
-            # Group files into batches of 3-5 for optimal processing
-            MATRIX=$(echo "$CHANGED_FILES" | jq -R -s -c '
-              split("\n") | map(select(length > 0)) | 
-              [_nwise(4)] | map({files: .})
-            ')
-            echo "doc_matrix=$MATRIX" >> $GITHUB_OUTPUT
-            echo "📊 Generated matrix for $(echo "$CHANGED_FILES" | wc -l) files"
-          fi
-
-      - name: Determine review type
-        if: steps.skip-check.outputs.should_skip != 'true'
-        id: analysis
-        run: |
-          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
-          
-          if [[ "${{ steps.changes.outputs.critical }}" == "true" ]] || \
-             [[ "$COMMIT_MSG" =~ (security|api|breaking) ]] || \
-             [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "review_type=comprehensive" >> $GITHUB_OUTPUT
-            echo "🔍 Comprehensive review required"
-          else
-            echo "review_type=standard" >> $GITHUB_OUTPUT
-            echo "📝 Standard review mode"
-          fi
-
-      - name: Generate cache key
-        if: steps.skip-check.outputs.should_skip != 'true'
-        id: cache-key
-        run: |
-          # Create content-based cache key
-          FILES_HASH=$(find docs -name "*.md" -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1)
-          CACHE_KEY="${{ env.AI_CACHE_KEY_PREFIX }}-${{ env.CACHE_VERSION }}-${FILES_HASH:0:8}"
-          echo "cache_key=$CACHE_KEY" >> $GITHUB_OUTPUT
-          echo "🔑 Cache key: $CACHE_KEY"
-
-  # Main documentation review with parallel processing
   claude-documentation-review:
-    needs: setup
-    if: needs.setup.outputs.should_skip != 'true' && needs.setup.outputs.doc_matrix != '[]'
     runs-on: ubuntu-latest
+    if: github.event.head_commit.message != null
     
     permissions:
       contents: read
       issues: write
       pull-requests: write
-      actions: read
-    
-    strategy:
-      matrix: ${{ fromJson(needs.setup.outputs.doc_matrix) }}
-      fail-fast: false
-      max-parallel: 3
-
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
-
-      - name: Restore AI response cache
-        uses: actions/cache@v4
-        id: ai-cache
-        with:
-          path: ~/.ai-responses
-          key: ${{ needs.setup.outputs.cache_key }}-${{ strategy.job-index }}
-          restore-keys: |
-            ${{ env.AI_CACHE_KEY_PREFIX }}-${{ env.CACHE_VERSION }}-
-
-      - name: Check cache status
-        id: cache-status
-        run: |
-          if [[ "${{ steps.ai-cache.outputs.cache-hit }}" == "true" ]] && \
-             [[ "${{ github.event.inputs.force_full_review }}" != "true" ]]; then
-            echo "use_cache=true" >> $GITHUB_OUTPUT
-            echo "✅ Using cached AI responses"
-          else
-            echo "use_cache=false" >> $GITHUB_OUTPUT
-            echo "🔄 Fresh AI analysis required"
-          fi
-
+          
       - name: Documentation Quality Review
-        if: steps.cache-status.outputs.use_cache != 'true'
-        uses: nick-invision/retry@v2
-        with:
-          timeout_minutes: 8
-          max_attempts: 3
-          retry_wait_seconds: 5
-          exponential_backoff: true
-          command: |
-            # Enhanced Claude review with optimized prompts
-            uses: grll/claude-code-action@beta
-            with:
-              github_token: ${{ secrets.GITHUB_TOKEN }}
-              
-              direct_prompt: |
-                🔍 **VideoCraft Documentation Review - Batch ${{ strategy.job-index }}**
-                
-                Files to review: ${{ join(matrix.files, ', ') }}
-                Review type: ${{ needs.setup.outputs.review_type }}
-                
-                ## 📋 Focus Areas for This Batch
-                
-                ### 1. **Technical Accuracy** (Priority: High)
-                - Verify code examples are syntactically correct and current
-                - Check API documentation matches implementation
-                - Validate configuration examples work as described
-                - Ensure version numbers and dependencies are accurate
-                
-                ### 2. **VideoCraft-Specific Validation**
-                
-                **Progressive Subtitles System:**
-                - Word-level timing calculations accuracy
-                - Scene-based timing integration details
-                - ASS subtitle generation process documentation
-                - Python-Go integration completeness
-                
-                **Security Documentation:**
-                - Authentication setup clarity and accuracy
-                - SSL/TLS configuration correctness
-                - Container security best practices
-                - Input validation comprehensive coverage
-                
-                **API Documentation:**
-                - Endpoint coverage from `internal/api/`
-                - Request/response example validity
-                - Clear authentication requirements
-                - Complete error response documentation
-                
-                ### 3. **Quality Standards**
-                - Clear, concise technical writing
-                - Proper markdown formatting and syntax
-                - Working internal and external links
-                - Consistent terminology and style
-                - Appropriate code syntax highlighting
-                
-                ### 4. **Completeness Verification**
-                - New features have corresponding docs
-                - All configuration options explained
-                - Security implications addressed
-                - Complete deployment instructions
-                - Complex features include examples
-                
-                ## 🎯 Cross-Reference Files
-                - `README.md` - Project overview
-                - `CLAUDE.md` - Architecture documentation
-                - `internal/api/CLAUDE.md` - API reference
-                - `internal/services/CLAUDE.md` - Service docs
-                - `scripts/CLAUDE.md` - Python integration
-                - `security-first.md` - Security requirements
-                
-                ## 📝 Output Format
-                
-                **For each file reviewed, provide:**
-                
-                ### ✅ **Strengths**
-                - Specific positive aspects
-                
-                ### ⚠️ **Issues** (with line numbers when possible)
-                - Technical inaccuracies
-                - Missing critical information
-                - Broken links or references
-                - Style/formatting problems
-                
-                ### 🚀 **Recommendations**
-                - Specific, actionable improvements
-                - Useful additional examples
-                - Areas needing more detail
-                
-                ### 🔄 **Code Sync Status**
-                - Documentation vs. implementation alignment
-                - Required documentation updates for code changes
-                
-                ## 🏆 **Batch Quality Score**
-                Rate this batch (1-10) with justification focusing on:
-                - Accuracy and completeness
-                - Clarity and usability
-                - Alignment with VideoCraft standards
-                
-                **Be thorough but constructive. Focus on maintaining VideoCraft's documentation excellence.**
-
-              model: ${{ needs.setup.outputs.review_type == 'comprehensive' && 'claude-sonnet-4-20250514' || 'claude-3-5-sonnet-20241022' }}
-              
-              timeout: 300
-              include_diff: ${{ needs.setup.outputs.review_type == 'comprehensive' }}
-
-      - name: Cache AI responses
-        if: steps.cache-status.outputs.use_cache != 'true'
-        run: |
-          mkdir -p ~/.ai-responses
-          echo "Response cached at $(date)" > ~/.ai-responses/batch-${{ strategy.job-index }}.txt
-
-  # Critical documentation check for security/API changes
-  critical-documentation-check:
-    needs: setup
-    if: needs.setup.outputs.should_skip != 'true' && needs.setup.outputs.review_type == 'comprehensive'
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Critical Documentation Sync Check
         uses: grll/claude-code-action@beta
+        with:
+          # OAuth-based authentication (requires Claude GitHub app installation)
+          use_oauth: true
+          claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
+          claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
+          claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
+          timeout_minutes: "60"
+          
+          # Comprehensive documentation review prompt
+          direct_prompt: |
+            🔍 **VideoCraft Documentation Review**
+            
+            I'm reviewing documentation changes in the VideoCraft video generation platform. Please analyze:
+            
+            ## 📋 Review Criteria
+            
+            ### 1. **Technical Accuracy**
+            - Verify code examples compile and work correctly
+            - Check API endpoint documentation matches implementation
+            - Validate configuration examples are syntactically correct
+            - Ensure version numbers and dependencies are current
+            
+            ### 2. **VideoCraft-Specific Areas**
+            
+            **Progressive Subtitles System:**
+            - Word-level timing explanations are accurate
+            - Scene-based timing calculations are correct
+            - ASS subtitle generation process is well documented
+            - Python-Go integration details are complete
+            
+            **Security Documentation:**
+            - Authentication setup is clearly explained
+            - SSL/TLS configuration is accurate
+            - Container security settings are documented
+            - Input validation guidelines are comprehensive
+            
+            **API Documentation:**
+            - All endpoints in `internal/api/` are documented
+            - Request/response examples are current and valid
+            - Authentication requirements are clear
+            - Error responses are properly documented
+            
+            ### 3. **Documentation Quality**
+            - Clear, concise writing
+            - Proper markdown formatting
+            - Working links and references
+            - Consistent terminology usage
+            - Appropriate code highlighting
+            
+            ### 4. **Completeness Check**
+            - New features have corresponding documentation
+            - Configuration options are explained
+            - Security implications are addressed
+            - Deployment instructions are complete
+            - Examples are provided for complex features
+            
+            ## 🎯 Key Files to Cross-Reference
+            
+            - `README.md` - Main project documentation
+            - `CLAUDE.md` - Technical architecture docs
+            - `internal/api/CLAUDE.md` - API reference
+            - `internal/services/CLAUDE.md` - Service documentation
+            - `scripts/CLAUDE.md` - Python integration
+            - `security-first.md` - Security requirements
+            
+            ## 📝 Review Output Format
+            
+            Provide feedback in this structure:
+            
+            ### ✅ **What's Good**
+            - List positive aspects of the documentation
+            
+            ### ⚠️ **Issues Found**
+            - Specific problems with line numbers/files when possible
+            - Technical inaccuracies
+            - Missing information
+            - Broken links or references
+            
+            ### 🚀 **Improvement Suggestions**
+            - Specific, actionable recommendations
+            - Additional examples that would be helpful
+            - Areas where more detail is needed
+            
+            ### 🔄 **Sync Check**
+            - Whether documentation matches current code
+            - Any code changes that need documentation updates
+            
+            ## 🎖️ **Quality Score**
+            Rate the overall documentation quality (1-10) and justify the score.
+            
+            ---
+            
+            Please be thorough but constructive. Focus on helping maintain VideoCraft's high documentation standards.
+            
+          # Advanced configuration
+          model: "claude-sonnet-4-20250514"
+
+      - name: Check for Critical Documentation Issues
+        uses: grll/claude-code-action@beta
+        if: contains(github.event.head_commit.message, 'security') || contains(github.event.head_commit.message, 'api') || contains(github.event.head_commit.message, 'breaking')
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           
           direct_prompt: |
-            🚨 **CRITICAL: VideoCraft Documentation Sync Verification**
+            🚨 **Critical Documentation Sync Check**
             
-            **Trigger**: ${{ github.event.head_commit.message || 'Manual review' }}
-            **Branch**: ${{ github.ref_name }}
-            **Author**: ${{ github.actor }}
+            A potentially critical commit was detected (security/API/breaking change).
             
-            ## 🔒 **Security Documentation Audit**
-            If security-related changes detected:
-            - ✅ Security configurations updated and accurate
-            - ✅ Vulnerability fixes properly documented
-            - ✅ Secure defaults clearly explained
-            - ✅ `security-first.md` reflects current practices
-            - ✅ Authentication/authorization flow documented
-            - ✅ Container security settings current
+            Please perform an urgent review focusing on:
             
-            ## 🔌 **API Documentation Validation** 
-            If API changes detected:
-            - ✅ New/modified endpoints fully documented
-            - ✅ Request/response examples current and valid
-            - ✅ Authentication requirements clearly stated
-            - ✅ Error responses comprehensively documented
-            - ✅ Rate limiting and pagination documented
-            - ✅ OpenAPI/Swagger specs updated if applicable
+            ### 🔒 **Security Documentation**
+            If security-related:
+            - Are security configurations updated?
+            - Are vulnerability fixes documented?
+            - Are secure defaults explained?
+            - Is the security-first.md file updated?
             
-            ## 💥 **Breaking Changes Assessment**
-            If breaking changes indicated:
-            - ✅ Clear migration instructions provided
-            - ✅ Deprecation notices properly formatted
-            - ✅ Version compatibility matrix updated
-            - ✅ Upgrade paths clearly documented
-            - ✅ Impact assessment included
-            - ✅ Timeline for changes specified
+            ### 🔌 **API Documentation** 
+            If API-related:
+            - Are new/changed endpoints documented?
+            - Are request/response examples updated?
+            - Are authentication requirements current?
+            - Are breaking changes highlighted?
             
-            ## 🎯 **Critical Gap Analysis**
+            ### 💥 **Breaking Changes**
+            If breaking changes:
+            - Are migration instructions provided?
+            - Are deprecation notices clear?
+            - Are version compatibility notes updated?
+            - Are upgrade paths documented?
             
-            **PRIORITY**: Flag any gaps that could:
-            - Compromise security implementations
-            - Block user adoption of new features
-            - Cause production deployment issues
-            - Violate compliance requirements
-            
-            ## 📊 **Risk Assessment**
-            
-            Rate documentation completeness for this critical change:
-            - **HIGH RISK**: Major gaps in security/API docs
-            - **MEDIUM RISK**: Minor omissions or unclear sections  
-            - **LOW RISK**: Documentation is comprehensive and current
-            
-            **If HIGH RISK identified, recommend blocking merge until resolved.**
+            **Flag any critical documentation gaps that could impact users.**
             
           include_diff: true
-          model: "claude-sonnet-4-20250514"
-          timeout: 180
+          model: 'claude-sonnet-4-20250514'
 
-  # Automated documentation improvement suggestions
-  documentation-enhancements:
-    needs: [setup, claude-documentation-review]
-    if: always() && needs.setup.outputs.should_skip != 'true'
+  documentation-suggestions:
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      issues: write
+    needs: claude-documentation-review
+    if: always()  # Run even if previous job fails
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Generate Enhancement Suggestions
+        
+      - name: Generate Documentation Improvement Suggestions
         uses: grll/claude-code-action@beta
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           
           direct_prompt: |
-            📈 **VideoCraft Documentation Enhancement Opportunities**
+            📈 **Documentation Enhancement Suggestions**
             
-            Review Status: ${{ needs.claude-documentation-review.result || 'Skipped' }}
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
+            Based on the current VideoCraft documentation, suggest specific improvements:
             
-            ## 🎯 **Quick Wins** (Immediate improvements)
-            Scan for:
-            - Markdown formatting inconsistencies
-            - Missing language specifications in code blocks
-            - Broken internal links or references
-            - Spelling/grammar issues
-            - Inconsistent heading styles
-            - Missing table of contents where beneficial
+            ### 🎯 **Quick Wins** (Easy improvements)
+            - Formatting fixes
+            - Missing code block language specifications
+            - Broken internal links
+            - Spelling/grammar corrections
             
-            ## 📚 **Content Enhancement Opportunities**
-            Identify:
-            - Complex concepts that need more examples
-            - Configuration options lacking explanation
-            - Missing cross-references between related docs
-            - Areas where diagrams would improve understanding
-            - API endpoints missing usage examples
-            - Security practices that need more detail
+            ### 📚 **Content Enhancements** (Medium effort)
+            - Additional examples that would be helpful
+            - Areas where more detail would improve understanding
+            - Cross-references that should be added
+            - Clarifications for complex concepts
             
-            ## 🏗️ **Structural Improvements**
-            Suggest:
-            - Better organization of information
-            - New sections that would add value
-            - Ways to improve navigation between docs
-            - User journey optimizations
-            - Integration improvements between different doc types
+            ### 🏗️ **Structural Improvements** (Larger effort)
+            - Documentation organization suggestions
+            - New sections that would be valuable
+            - Better integration between different docs
+            - User journey improvements
             
-            ## 🔍 **Coverage Gaps**
-            Find:
-            - Undocumented features or configuration options
-            - Missing troubleshooting sections
-            - Incomplete API reference coverage
-            - Security considerations not addressed
-            - Deployment scenarios not covered
+            ### 🔍 **Missing Documentation** (Critical gaps)
+            - Undocumented features
+            - Missing configuration options
+            - Incomplete API coverage
+            - Security gaps
             
-            ## 📋 **Actionable Output Format**
+            **Format as actionable GitHub issues that could be created.**
             
-            For each suggestion, provide:
-            1. **Category**: Quick Win | Content | Structural | Coverage
-            2. **Priority**: High | Medium | Low
-            3. **Effort**: 1-5 hours estimated
-            4. **Impact**: User experience improvement expected
-            5. **Implementation**: Specific steps to address
-            
-            **Goal**: Generate GitHub issues ready for the VideoCraft team to implement.
-            
-          model: "claude-3-5-sonnet-20241022"
-
-  # Auto-commit documentation fixes (with skip CI)
-  auto-fix-documentation:
-    needs: [setup, claude-documentation-review, critical-documentation-check]
-    if: |
-      always() && 
-      needs.setup.outputs.should_skip != 'true' && 
-      github.ref == 'refs/heads/main' &&
-      (needs.claude-documentation-review.result == 'success' || needs.claude-documentation-review.result == 'skipped')
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write
-      pull-requests: write
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Apply automatic fixes
-        id: auto-fixes
-        run: |
-          # Example automatic fixes - customize based on your needs
-          FIXES_APPLIED=false
-          
-          # Fix common markdown issues
-          if find docs -name "*.md" -exec grep -l "```$" {} \; | head -1; then
-            echo "🔧 Fixing unclosed code blocks..."
-            find docs -name "*.md" -exec sed -i 's/```$/```bash/g' {} \;
-            FIXES_APPLIED=true
-          fi
-          
-          # Fix broken internal links (basic pattern)
-          if find docs -name "*.md" -exec grep -l "\[.*\](\./" {} \; | head -1; then
-            echo "🔧 Fixing relative link formatting..."
-            # Add your link fixing logic here
-          fi
-          
-          echo "fixes_applied=$FIXES_APPLIED" >> $GITHUB_OUTPUT
-
-      - name: Commit automatic fixes
-        if: steps.auto-fixes.outputs.fixes_applied == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "VideoCraft Doc Bot"
-          
-          git add docs/
-          git commit -m "docs: automatic formatting fixes [skip ci]
-
-          - Fixed markdown formatting issues
-          - Corrected code block syntax
-          - Applied consistent styling
-          
-          Auto-generated by documentation review workflow" || exit 0
-          
-          git push
-
-  # Status gate for branch protection
-  documentation-review-gate:
-    needs: [setup, claude-documentation-review, critical-documentation-check]
-    if: always()
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Evaluate review results
-        run: |
-          echo "🏁 Documentation Review Summary"
-          echo "=============================="
-          
-          if [[ "${{ needs.setup.outputs.should_skip }}" == "true" ]]; then
-            echo "✅ CI skipped by commit message or automation"
-            exit 0
-          fi
-          
-          if [[ "${{ needs.claude-documentation-review.result }}" == "success" ]] || \
-             [[ "${{ needs.claude-documentation-review.result }}" == "skipped" ]]; then
-            echo "✅ Documentation review passed"
-            
-            if [[ "${{ needs.critical-documentation-check.result }}" == "success" ]] || \
-               [[ "${{ needs.critical-documentation-check.result }}" == "skipped" ]]; then
-              echo "✅ Critical documentation check passed"
-              echo "🎉 All documentation checks successful!"
-              exit 0
-            else
-              echo "❌ Critical documentation check failed"
-              exit 1
-            fi
-          else
-            echo "❌ Documentation review failed"
-            echo "Details available in job logs above"
-            exit 1
-          fi
+          model: "claude-4-sonnet-20241022"
