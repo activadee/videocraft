@@ -144,10 +144,16 @@ class WhisperDaemon:
             import ssl
             import os
             
-            # Create SSL context that doesn't verify certificates (for Google Drive)
+            # Create SSL context with proper certificate verification
             ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
+            # Keep default security settings:
+            # ssl_context.check_hostname = True (default)
+            # ssl_context.verify_mode = ssl.CERT_REQUIRED (default)
+            # 
+            # Note: Certificate pinning is not implemented as the daemon
+            # handles arbitrary audio URLs from various sources, making
+            # pinning impractical. Standard certificate validation provides
+            # adequate security for this use case.
             
             # Download audio to temporary file
             with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_file:
