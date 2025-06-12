@@ -1,0 +1,67 @@
+# Binaries
+videocraft
+videocraft.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build artifacts
+coverage.out
+coverage.html
+
+# Generated content
+generated_videos/
+temp/
+whisper_cache/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Go vendor directory
+vendor/
+
+# Go test files
+*.test
+
+# Migration documentation (temporary development files)
+GO_MIGRATION_PLAN.md
+GO_CODE_EXAMPLES.md
+README_GO_MIGRATION.md
+
+# Dependency directories
+node_modules/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary folders
+tmp/
+.tmp/
