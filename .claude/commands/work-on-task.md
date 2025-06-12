@@ -260,6 +260,8 @@ class FeatureName {
 ## 🚀 Implementation Complete - Creating PR
 
 ### Final Commit Message
+```
+
 ```bash
 git add .
 git commit -m "feat: implement JWT authentication middleware (#123)

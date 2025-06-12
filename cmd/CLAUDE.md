@@ -6,7 +6,7 @@ The `cmd` package contains the main entry points for the VideoCraft application.
 
 ## Structure
 
-```
+```text
 cmd/
 ├── server/         # HTTP API server
 │   └── main.go

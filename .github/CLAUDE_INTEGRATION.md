@@ -9,7 +9,7 @@ The Claude Code Action automatically reviews documentation changes and ensures c
 ## Features
 
 ### 📝 Automatic Documentation Review
-- Reviews all documentation changes for clarity, accuracy, and completeness
+- Automatically reviews all documentation changes for clarity, accuracy, and completeness
 - Checks technical accuracy of code examples and API documentation
 - Ensures consistency with project style and structure
 - Validates links and references
@@ -51,7 +51,7 @@ GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 1. **Get Claude API Access**:
    - Sign up at [Anthropic Console](https://console.anthropic.com/)
    - Create an API key
-   - Note: Requires Claude Pro subscription for best performance
+   - Note: A Claude Pro subscription is recommended for optimal performance
 
 2. **Add to GitHub Secrets**:
    ```bash
@@ -86,8 +86,8 @@ paths:
 ```
 
 ### 🔍 Special Triggers
-- **Security commits**: Contains "security", "fix", or "vulnerability"
-- **API commits**: Contains "api", "endpoint", or "handler"
+- **Security commits**: Commit messages containing "security", "fix", or "vulnerability"
+- **API commits**: Commit messages containing "api", "endpoint", or "handler"
 
 ## Review Focus Areas
 
@@ -104,7 +104,7 @@ paths:
 - SSL/TLS setup instructions
 - Container security settings
 - Input validation guidelines
-- Rate limiting configuration
+- Rate-limiting configuration
 
 #### API Documentation
 - Video generation endpoints
@@ -211,7 +211,7 @@ Error: 401 Unauthorized
 
 ### Debugging
 
-Enable debug mode by adding to workflow:
+Enable debug mode by adding to the workflow:
 ```yaml
 env:
   ACTIONS_STEP_DEBUG: true
@@ -267,7 +267,7 @@ echo "🔍 Claude AI will review documentation on push to main"
 
 ### API Usage Optimization
 - Reviews only trigger on relevant file changes
-- Batches multiple changes in single review
+- Batches multiple changes in a single review
 - Uses efficient prompts to minimize token usage
 - Caches results to avoid duplicate reviews
 
@@ -286,7 +286,7 @@ echo "🔍 Claude AI will review documentation on push to main"
 - Review generated issues and comments for quality
 
 ### Updates
-- Update Claude model version in `.github/workflows/documentation-review.yml`
+- Update the Claude model version in `.github/workflows/documentation-review.yml`
 - Adjust prompts based on review quality
 - Modify trigger patterns as project evolves
 

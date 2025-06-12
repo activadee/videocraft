@@ -5,7 +5,7 @@ The `internal/domain` package contains the core business entities, value objects
 
 ## Architecture
 
-```
+```text
 internal/domain/
 ├── models/
 │   └── video.go           # Core video domain models

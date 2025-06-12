@@ -5,7 +5,7 @@ The `internal/config` package provides centralized configuration management for 
 
 ## Architecture
 
-```
+```text
 internal/config/
 ├── config.go         # Main configuration structures and loading logic
 └── CLAUDE.md         # This documentation

@@ -34,7 +34,7 @@ VideoCraft is a high-performance Go-based video generation platform that creates
 ## Quick Start
 
 ### Prerequisites
-- Go 1.24+ 
+- Go 1.21+ 
 - FFmpeg
 - Python 3.8+ (for Whisper daemon)
 - Docker (optional)
@@ -189,7 +189,7 @@ Unlike simple concatenation approaches, VideoCraft uses **real audio file durati
 ## Development
 
 ### Project Structure
-```
+```text
 videocraft/
 ├── cmd/                    # Entry points (server, CLI)
 ├── internal/
@@ -372,7 +372,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Documentation**: See individual package CLAUDE.md files for detailed technical docs
 - **Issues**: Report bugs and feature requests via GitHub Issues
-- **Contributing**: See CONTRIBUTING.md for development guidelines
+- **Contributing**: See the Contributing section above for development guidelines
 
 ---
 
