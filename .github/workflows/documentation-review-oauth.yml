@@ -19,7 +19,13 @@ on:
       - 'cmd/**/*.go'
       - 'scripts/**/*.py'
   workflow_dispatch:  # Allow manual triggers
-
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+  statuses: write
 jobs:
   auto-fix-documentation:
     runs-on: ubuntu-latest
