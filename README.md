@@ -228,7 +228,7 @@ OUTPUT_DIR=./generated_videos
 TEMP_DIR=./temp
 
 # Security
-SECURITY_ALLOWED_DOMAINS=trusted.example.com,cdn.trusted.org
+VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS=trusted.example.com,cdn.trusted.org
 
 # Whisper daemon
 PYTHON_PATH=/usr/bin/python3

@@ -301,3 +301,7 @@ func (n *NoopLogger) WithField(key string, value interface{}) logger.Logger {
 func (n *NoopLogger) WithFields(fields map[string]interface{}) logger.Logger {
 	return n
 }
+
+func (n *NoopLogger) WithError(err error) logger.Logger {
+	return n
+}
