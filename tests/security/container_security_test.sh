@@ -3,8 +3,9 @@
 # Container Security Test Suite
 # Tests for Issue #13: Enforce Container Security Context
 
-# Note: set -e is commented out to allow all tests to run and generate complete PASS/FAIL summary
-# set -e
+# Note: Using set -o pipefail to catch pipeline failures safely
+# set -e is not used to allow all tests to run and generate complete PASS/FAIL summary
+set -o pipefail
 
 TEST_IMAGE="videocraft:security-test"
 TEST_CONTAINER="videocraft-security-test"
@@ -30,7 +31,7 @@ test_pass() {
 test_fail() {
     echo -e "${RED}❌ FAIL: $1${NC}"
     ((FAIL_COUNT++))
-    return 1
+    # Note: No return 1 to allow script continuation for complete test execution
 }
 
 # Cleanup function
