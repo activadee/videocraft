@@ -3,15 +3,16 @@
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
 2. [Core Components](#core-components)
-3. [Data Flow & Processing](#data-flow--processing)
-4. [Progressive Subtitles System](#progressive-subtitles-system)
-5. [Python-Go Integration](#python-go-integration)
-6. [FFmpeg Integration](#ffmpeg-integration)
-7. [Configuration Management](#configuration-management)
-8. [Error Handling](#error-handling)
-9. [Performance Optimization](#performance-optimization)
-10. [Debugging & Troubleshooting](#debugging--troubleshooting)
-11. [Development Guidelines](#development-guidelines)
+3. [Security Implementation](#security-implementation)
+4. [Data Flow & Processing](#data-flow--processing)
+5. [Progressive Subtitles System](#progressive-subtitles-system)
+6. [Python-Go Integration](#python-go-integration)
+7. [FFmpeg Integration](#ffmpeg-integration)
+8. [Configuration Management](#configuration-management)
+9. [Error Handling](#error-handling)
+10. [Performance Optimization](#performance-optimization)
+11. [Debugging & Troubleshooting](#debugging--troubleshooting)
+12. [Development Guidelines](#development-guidelines)
 
 ## Architecture Overview
 
@@ -150,6 +151,155 @@ type FFmpegService interface {
 - `TranscriptionResult`: Whisper output with word-level timing
 
 **Validation**: Business rule enforcement and input validation
+
+## Security Implementation
+
+VideoCraft implements a comprehensive security-first approach to protect against command injection, unauthorized access, and malicious input.
+
+### Multi-Layered Security Architecture
+
+```mermaid
+graph TB
+    subgraph "Security Layers"
+        Input[Input Validation]
+        URLVal[URL Validation]
+        Sanitize[Input Sanitization]
+        Protocol[Protocol Allowlist]
+        Domain[Domain Allowlist]
+        Logging[Security Logging]
+    end
+    
+    subgraph "Attack Vectors"
+        CmdInj[Command Injection]
+        PathTrav[Path Traversal]
+        ProtInj[Protocol Injection]
+        SSRF[SSRF Attacks]
+    end
+    
+    Input --> URLVal
+    URLVal --> Sanitize
+    Sanitize --> Protocol
+    Protocol --> Domain
+    Domain --> Logging
+    
+    URLVal -.blocks.-> CmdInj
+    URLVal -.blocks.-> PathTrav
+    Protocol -.blocks.-> ProtInj
+    Domain -.blocks.-> SSRF
+```
+
+### FFmpeg Command Injection Prevention
+
+The FFmpeg service implements comprehensive protection against command injection attacks through multiple validation layers:
+
+#### 1. URL Validation
+```go
+func (s *ffmpegService) ValidateURL(rawURL string) error {
+    // Early rejection of dangerous URI schemes
+    if err := s.checkForDataURI(rawURL); err != nil {
+        return err
+    }
+    
+    // Character-based injection detection
+    if err := s.checkForInjectionChars(rawURL); err != nil {
+        return err
+    }
+    
+    // Path traversal detection
+    if err := s.checkForPathTraversal(rawURL); err != nil {
+        return err
+    }
+    
+    // URL structure and protocol validation
+    return s.validateURLStructureAndProtocol(rawURL)
+}
+```
+
+#### 2. Input Sanitization
+- **Prohibited Characters**: `[;&|` + "`" + `$(){}]`
+- **Path Traversal**: `\.\.\/|\.\.\\`
+- **Command Filtering**: Removes dangerous shell commands
+- **Token Isolation**: Keeps only first valid token
+
+#### 3. Protocol Allowlist
+- **Allowed**: HTTP, HTTPS only
+- **Blocked**: `data:`, `file:`, `javascript:`, `vbscript:`
+
+#### 4. Domain Allowlist (Optional)
+```go
+type SecurityConfig struct {
+    AllowedDomains []string `mapstructure:"allowed_domains"`
+}
+```
+
+#### 5. Security Logging
+All security violations are logged with structured data:
+```go
+func (s *ffmpegService) logSecurityViolation(message string, fields map[string]interface{}) {
+    s.log.WithFields(fields).Errorf("SECURITY_VIOLATION: %s", message)
+}
+```
+
+### Security Integration Points
+
+Security validation is integrated at critical points in the video generation workflow:
+
+1. **Command Building**: All URLs validated before FFmpeg command construction
+2. **Configuration Processing**: Input sanitization during config parsing
+3. **External Resource Access**: Domain allowlist enforcement
+4. **Error Handling**: Security violations properly logged and reported
+
+### Security Testing
+
+Comprehensive test coverage includes:
+- **34 security-focused tests** across main and edge case scenarios
+- **Command injection prevention** testing
+- **Performance testing** (1000 URLs validated in <1ms)
+- **Edge case handling** (Unicode, encoding, case sensitivity)
+
+#### Example Security Tests
+```go
+func TestFFmpegService_URLValidation_CommandInjectionPrevention(t *testing.T) {
+    maliciousURLs := []struct {
+        url           string
+        expectedError string
+    }{
+        {"http://example.com/video.mp4; rm -rf /", "prohibited characters"},
+        {"file:///etc/passwd", "Protocol not allowed"},
+        {"data:text/plain;base64,SGVsbG8=", "Protocol not allowed"},
+        {"http://example.com/../../../etc/passwd", "path traversal sequences"},
+    }
+    
+    for _, test := range maliciousURLs {
+        err := service.ValidateURL(test.url)
+        require.Error(t, err)
+        assert.Contains(t, err.Error(), test.expectedError)
+    }
+}
+```
+
+### Configuration
+
+Security features are configurable via environment variables:
+
+```bash
+# Domain allowlist (comma-separated)
+VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS=trusted.example.com,cdn.trusted.org
+
+# Rate limiting
+VIDEOCRAFT_SECURITY_RATE_LIMIT=100
+
+# Authentication
+VIDEOCRAFT_SECURITY_ENABLE_AUTH=true
+```
+
+### Security Best Practices
+
+1. **Defense in Depth**: Multiple validation layers prevent bypass attempts
+2. **Allowlist over Blocklist**: Protocol and domain allowlists are more secure
+3. **Input Sanitization**: Clean inputs before processing
+4. **Comprehensive Logging**: All security events are logged for monitoring
+5. **Regular Testing**: Automated security tests prevent regressions
 
 ## Data Flow & Processing
 
