@@ -122,7 +122,7 @@ func NewStorageService(cfg *config.Config, log logger.Logger) StorageService {
 }
 
 func NewJobService(
-	cfg *config.Config, 
+	cfg *config.Config,
 	log logger.Logger,
 	ffmpeg FFmpegService,
 	audio AudioService,

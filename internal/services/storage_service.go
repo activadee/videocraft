@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/activadee/videocraft/internal/config"
 	domainErrors "github.com/activadee/videocraft/internal/domain/errors"
 	"github.com/activadee/videocraft/pkg/logger"
@@ -74,7 +75,7 @@ func (s *storageService) GetVideo(videoID string) (string, error) {
 	if err := s.validateVideoID(videoID); err != nil {
 		s.logSecurityViolation("Invalid video ID provided", map[string]interface{}{
 			"video_id": videoID,
-			"error": err.Error(),
+			"error":    err.Error(),
 		})
 		return "", err
 	}
@@ -87,11 +88,11 @@ func (s *storageService) GetVideo(videoID string) (string, error) {
 
 	// Build safe pattern within output directory
 	pattern := filepath.Join(s.cfg.Storage.OutputDir, sanitizedID+".*")
-	
+
 	// Additional security check: ensure pattern is within output directory
-	if err := s.validatePathWithinBounds(pattern, s.cfg.Storage.OutputDir); err != nil {
+	if validateErr := s.validatePathWithinBounds(pattern, s.cfg.Storage.OutputDir); validateErr != nil {
 		s.logSecurityViolation("Path outside allowed directory", map[string]interface{}{
-			"pattern": pattern,
+			"pattern":    pattern,
 			"output_dir": s.cfg.Storage.OutputDir,
 		})
 		return "", errors.New("path traversal detected")
@@ -108,9 +109,9 @@ func (s *storageService) GetVideo(videoID string) (string, error) {
 
 	// Security check: verify all matches are within allowed directory
 	for _, match := range matches {
-		if err := s.validatePathWithinBounds(match, s.cfg.Storage.OutputDir); err != nil {
+		if matchErr := s.validatePathWithinBounds(match, s.cfg.Storage.OutputDir); matchErr != nil {
 			s.logSecurityViolation("Match outside allowed directory", map[string]interface{}{
-				"match": match,
+				"match":      match,
 				"output_dir": s.cfg.Storage.OutputDir,
 			})
 			continue
@@ -119,16 +120,16 @@ func (s *storageService) GetVideo(videoID string) (string, error) {
 
 	// Return first valid match
 	videoPath := matches[0]
-	
+
 	// Final security check on result path
-	if err := s.validatePathWithinBounds(videoPath, s.cfg.Storage.OutputDir); err != nil {
+	if finalErr := s.validatePathWithinBounds(videoPath, s.cfg.Storage.OutputDir); finalErr != nil {
 		s.logSecurityViolation("Result path outside allowed directory", map[string]interface{}{
 			"video_path": videoPath,
 			"output_dir": s.cfg.Storage.OutputDir,
 		})
 		return "", errors.New("path traversal detected")
 	}
-	
+
 	// Verify file exists and is not a symlink
 	fileInfo, err := os.Lstat(videoPath)
 	if err != nil {
@@ -139,7 +140,7 @@ func (s *storageService) GetVideo(videoID string) (string, error) {
 	if fileInfo.Mode()&os.ModeSymlink != 0 {
 		s.logSecurityViolation("Symbolic link access attempt", map[string]interface{}{
 			"video_path": videoPath,
-			"video_id": videoID,
+			"video_id":   videoID,
 		})
 		return "", errors.New("symbolic link access not allowed")
 	}
@@ -318,23 +319,23 @@ func (s *storageService) validateVideoID(videoID string) error {
 func (s *storageService) sanitizeVideoID(videoID string) (string, error) {
 	// Trim whitespace
 	sanitized := strings.TrimSpace(videoID)
-	
+
 	// Remove any null bytes
 	sanitized = nullByteRegex.ReplaceAllString(sanitized, "")
-	
+
 	// Remove control characters
 	sanitized = controlCharRegex.ReplaceAllString(sanitized, "")
-	
+
 	// Ensure it's not empty after sanitization
 	if sanitized == "" {
 		return "", errors.New("video ID becomes empty after sanitization")
 	}
-	
+
 	// Check if it matches valid pattern
 	if !validVideoIDRegex.MatchString(sanitized) {
 		return "", errors.New("invalid video ID format")
 	}
-	
+
 	return sanitized, nil
 }
 
@@ -345,23 +346,23 @@ func (s *storageService) validatePathWithinBounds(targetPath, allowedDir string)
 	if err != nil {
 		return fmt.Errorf("failed to resolve target path: %w", err)
 	}
-	
+
 	cleanAllowed, err := filepath.Abs(filepath.Clean(allowedDir))
 	if err != nil {
 		return fmt.Errorf("failed to resolve allowed directory: %w", err)
 	}
-	
+
 	// Check if target is within allowed directory
 	relPath, err := filepath.Rel(cleanAllowed, cleanTarget)
 	if err != nil {
 		return fmt.Errorf("failed to determine relative path: %w", err)
 	}
-	
+
 	// If relative path starts with ".." it's outside the allowed directory
 	if strings.HasPrefix(relPath, "..") || strings.HasPrefix(relPath, "/") {
 		return errors.New("path traversal detected")
 	}
-	
+
 	return nil
 }
 

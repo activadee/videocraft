@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	
+
 	"github.com/activadee/videocraft/internal/domain/models"
 )
 
@@ -40,14 +40,14 @@ func NewASSGenerator(config ASSConfig) *ASSGenerator {
 // GenerateASS creates complete ASS file content from subtitle events
 func (g *ASSGenerator) GenerateASS(events []SubtitleEvent) string {
 	var builder strings.Builder
-	
+
 	// Write header
 	builder.WriteString(g.generateHeader())
 	builder.WriteString("\n")
-	
+
 	// Write events
 	builder.WriteString(g.generateEvents(events))
-	
+
 	return builder.String()
 }
 
@@ -56,7 +56,7 @@ func (g *ASSGenerator) generateHeader() string {
 	wordColor := g.parseColorToASS(g.config.WordColor)
 	outlineColor := g.parseColorToASS(g.config.OutlineColor)
 	alignment := g.getAlignment(g.config.Position)
-	
+
 	return fmt.Sprintf(`[Script Info]
 Title: Generated Progressive Subtitles
 ScriptType: v4.00+
@@ -84,22 +84,22 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
 // generateEvents creates ASS dialogue events from subtitle events
 func (g *ASSGenerator) generateEvents(events []SubtitleEvent) string {
 	var builder strings.Builder
-	
+
 	for _, event := range events {
 		startTime := g.formatASSTime(event.StartTime)
 		endTime := g.formatASSTime(event.EndTime)
 		cleanText := g.cleanTextForASS(event.Text)
-		
+
 		line := fmt.Sprintf("Dialogue: %d,%s,%s,Default,,0,0,0,,%s\n",
 			event.Layer,
 			startTime,
 			endTime,
 			cleanText,
 		)
-		
+
 		builder.WriteString(line)
 	}
-	
+
 	return builder.String()
 }
 
@@ -110,7 +110,7 @@ func (g *ASSGenerator) formatASSTime(duration time.Duration) string {
 	minutes := (int(totalSeconds) % 3600) / 60
 	seconds := int(totalSeconds) % 60
 	centiseconds := int((totalSeconds - float64(int(totalSeconds))) * 100)
-	
+
 	return fmt.Sprintf("%d:%02d:%02d.%02d", hours, minutes, seconds, centiseconds)
 }
 
@@ -118,17 +118,17 @@ func (g *ASSGenerator) formatASSTime(duration time.Duration) string {
 func (g *ASSGenerator) parseColorToASS(hexColor string) string {
 	// Remove # prefix if present
 	hexColor = strings.TrimPrefix(hexColor, "#")
-	
+
 	// Ensure we have 6 characters
 	if len(hexColor) != 6 {
 		return "&H00FFFFFF" // Default white
 	}
-	
+
 	// Extract RGB components
 	r := hexColor[0:2]
 	gComponent := hexColor[2:4]
 	b := hexColor[4:6]
-	
+
 	// Convert to BGR format for ASS (with alpha channel)
 	return fmt.Sprintf("&H00%s%s%s", b, gComponent, r)
 }
@@ -136,21 +136,21 @@ func (g *ASSGenerator) parseColorToASS(hexColor string) string {
 // getAlignment maps position string to ASS alignment number
 func (g *ASSGenerator) getAlignment(position string) int {
 	alignmentMap := map[string]int{
-		"left-bottom":    1,
-		"center-bottom":  2,
-		"right-bottom":   3,
-		"left-center":    4,
-		"center-center":  5,
-		"right-center":   6,
-		"left-top":       7,
-		"center-top":     8,
-		"right-top":      9,
+		"left-bottom":   1,
+		"center-bottom": 2,
+		"right-bottom":  3,
+		"left-center":   4,
+		"center-center": 5,
+		"right-center":  6,
+		"left-top":      7,
+		"center-top":    8,
+		"right-top":     9,
 	}
-	
+
 	if alignment, exists := alignmentMap[position]; exists {
 		return alignment
 	}
-	
+
 	return 2 // Default to center-bottom
 }
 
@@ -158,28 +158,28 @@ func (g *ASSGenerator) getAlignment(position string) int {
 func (g *ASSGenerator) cleanTextForASS(text string) string {
 	// Replace newlines with ASS line breaks
 	text = strings.ReplaceAll(text, "\n", "\\N")
-	
+
 	// Escape braces
 	text = strings.ReplaceAll(text, "{", "\\{")
 	text = strings.ReplaceAll(text, "}", "\\}")
-	
+
 	// Replace pipe with hard space
 	text = strings.ReplaceAll(text, "|", "\\h")
-	
+
 	// Clean up extra whitespace
 	text = strings.Join(strings.Fields(text), " ")
-	
+
 	return text
 }
 
 // CreateProgressiveEvents generates word-by-word subtitle events
 func CreateProgressiveEvents(words []WordTimestamp, sceneStartTime time.Duration) []SubtitleEvent {
 	var events []SubtitleEvent
-	
+
 	if len(words) == 0 {
 		return events
 	}
-	
+
 	// Find the actual audio duration from word timestamps
 	var maxWordEnd float64
 	for _, word := range words {
@@ -187,28 +187,28 @@ func CreateProgressiveEvents(words []WordTimestamp, sceneStartTime time.Duration
 			maxWordEnd = word.End
 		}
 	}
-	
+
 	// If all words start from the beginning, use them directly (relative timing)
 	// If words have a significant offset, normalize them
-	var minWordStart float64 = words[0].Start
+	var minWordStart = words[0].Start
 	for _, word := range words {
 		if word.Start < minWordStart {
 			minWordStart = word.Start
 		}
 	}
-	
+
 	for i, word := range words {
 		if strings.TrimSpace(word.Word) == "" {
 			continue
 		}
-		
+
 		// Normalize timestamps to start from scene beginning
 		// This handles both relative (starting near 0) and absolute timestamps
 		normalizedStart := word.Start - minWordStart
 		normalizedEnd := word.End - minWordStart
-		
+
 		startTime := sceneStartTime + time.Duration(normalizedStart*float64(time.Second))
-		
+
 		// End time is either the start of the next word or word's end time
 		var endTime time.Duration
 		if i+1 < len(words) {
@@ -217,40 +217,40 @@ func CreateProgressiveEvents(words []WordTimestamp, sceneStartTime time.Duration
 		} else {
 			endTime = sceneStartTime + time.Duration(normalizedEnd*float64(time.Second))
 		}
-		
+
 		event := SubtitleEvent{
 			StartTime: startTime,
 			EndTime:   endTime,
 			Text:      strings.TrimSpace(word.Word),
 			Layer:     0,
 		}
-		
+
 		events = append(events, event)
 	}
-	
+
 	return events
 }
 
 // CreateProgressiveEventsWithSceneTiming generates word-by-word subtitle events with proper scene timing
 func CreateProgressiveEventsWithSceneTiming(words []WordTimestamp, sceneTiming models.TimingSegment) []SubtitleEvent {
 	var events []SubtitleEvent
-	
+
 	if len(words) == 0 {
 		return events
 	}
-	
+
 	sceneStartTime := time.Duration(sceneTiming.StartTime * float64(time.Second))
 	sceneEndTime := time.Duration(sceneTiming.EndTime * float64(time.Second))
-	
+
 	for i, word := range words {
 		if strings.TrimSpace(word.Word) == "" {
 			continue
 		}
-		
+
 		// Map Whisper timestamps (relative to audio file) to absolute video timeline
 		// This is the key fix: use scene timing boundaries properly
 		startTime := sceneStartTime + time.Duration(word.Start*float64(time.Second))
-		
+
 		// End time is either the start of the next word or word's end time
 		var endTime time.Duration
 		if i+1 < len(words) {
@@ -259,7 +259,7 @@ func CreateProgressiveEventsWithSceneTiming(words []WordTimestamp, sceneTiming m
 		} else {
 			endTime = sceneStartTime + time.Duration(word.End*float64(time.Second))
 		}
-		
+
 		// Ensure we don't exceed scene boundaries
 		if startTime < sceneStartTime {
 			startTime = sceneStartTime
@@ -267,17 +267,17 @@ func CreateProgressiveEventsWithSceneTiming(words []WordTimestamp, sceneTiming m
 		if endTime > sceneEndTime {
 			endTime = sceneEndTime
 		}
-		
+
 		event := SubtitleEvent{
 			StartTime: startTime,
 			EndTime:   endTime,
 			Text:      strings.TrimSpace(word.Word),
 			Layer:     0,
 		}
-		
+
 		events = append(events, event)
 	}
-	
+
 	return events
 }
 
@@ -286,14 +286,14 @@ func CreateClassicEvents(text string, sceneStartTime, sceneDuration time.Duratio
 	if strings.TrimSpace(text) == "" {
 		return []SubtitleEvent{}
 	}
-	
+
 	event := SubtitleEvent{
 		StartTime: sceneStartTime,
 		EndTime:   sceneStartTime + sceneDuration,
 		Text:      strings.TrimSpace(text),
 		Layer:     0,
 	}
-	
+
 	return []SubtitleEvent{event}
 }
 

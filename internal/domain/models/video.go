@@ -27,31 +27,31 @@ type Element struct {
 	Type string `json:"type"`
 	Src  string `json:"src,omitempty"`
 	ID   string `json:"id,omitempty"`
-	
+
 	X int `json:"x,omitempty"`
 	Y int `json:"y,omitempty"`
-	
+
 	ZIndex   int     `json:"z-index,omitempty"`
 	Volume   float64 `json:"volume,omitempty"`
 	Resize   string  `json:"resize,omitempty"`
 	Duration float64 `json:"duration,omitempty"`
-	
+
 	Settings SubtitleSettings `json:"settings,omitempty"`
 	Language string           `json:"language,omitempty"`
 }
 
 type SubtitleSettings struct {
-	Style         string  `json:"style,omitempty"`
-	FontFamily    string  `json:"font-family,omitempty"`
-	FontSize      int     `json:"font-size,omitempty"`
-	WordColor     string  `json:"word-color,omitempty"`
-	LineColor     string  `json:"line-color,omitempty"`
-	ShadowColor   string  `json:"shadow-color,omitempty"`
-	ShadowOffset  int     `json:"shadow-offset,omitempty"`
-	BoxColor      string  `json:"box-color,omitempty"`
-	Position      string  `json:"position,omitempty"`
-	OutlineColor  string  `json:"outline-color,omitempty"`
-	OutlineWidth  int     `json:"outline-width,omitempty"`
+	Style        string `json:"style,omitempty"`
+	FontFamily   string `json:"font-family,omitempty"`
+	FontSize     int    `json:"font-size,omitempty"`
+	WordColor    string `json:"word-color,omitempty"`
+	LineColor    string `json:"line-color,omitempty"`
+	ShadowColor  string `json:"shadow-color,omitempty"`
+	ShadowOffset int    `json:"shadow-offset,omitempty"`
+	BoxColor     string `json:"box-color,omitempty"`
+	Position     string `json:"position,omitempty"`
+	OutlineColor string `json:"outline-color,omitempty"`
+	OutlineWidth int    `json:"outline-width,omitempty"`
 }
 
 // Validation
@@ -75,7 +75,7 @@ func (vp VideoProject) Validate() error {
 		if scene.ID == "" {
 			return errors.New("scene " + string(rune(i)) + ": ID is required")
 		}
-		
+
 		for j, element := range scene.Elements {
 			if err := element.Validate(); err != nil {
 				return errors.New("scene " + scene.ID + " element " + string(rune(j)) + ": " + err.Error())
@@ -151,11 +151,11 @@ const (
 
 // TranscriptionResult holds the result of audio transcription
 type TranscriptionResult struct {
-	Text      string         `json:"text"`
-	Segments  []Segment      `json:"segments"`
-	Language  string         `json:"language"`
-	Duration  float64        `json:"duration"`
-	WordLevel []WordSegment  `json:"word_level,omitempty"`
+	Text      string        `json:"text"`
+	Segments  []Segment     `json:"segments"`
+	Language  string        `json:"language"`
+	Duration  float64       `json:"duration"`
+	WordLevel []WordSegment `json:"word_level,omitempty"`
 }
 
 type Segment struct {

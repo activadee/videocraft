@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/models"
 	"github.com/activadee/videocraft/pkg/logger"
@@ -18,7 +19,7 @@ func TestFFmpegService_URLValidation_CommandInjectionPrevention(t *testing.T) {
 			Timeout:    time.Minute * 5,
 		},
 	}
-	
+
 	mockLogger := &NoopLogger{}
 	service := &ffmpegService{
 		cfg: cfg,
@@ -26,10 +27,10 @@ func TestFFmpegService_URLValidation_CommandInjectionPrevention(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		maliciousURL   string
-		expectedError  string
-		shouldFail     bool
+		name          string
+		maliciousURL  string
+		expectedError string
+		shouldFail    bool
 	}{
 		{
 			name:          "Command injection with semicolon",
@@ -40,7 +41,7 @@ func TestFFmpegService_URLValidation_CommandInjectionPrevention(t *testing.T) {
 		{
 			name:          "Command injection with pipe",
 			maliciousURL:  "http://example.com/video.mp4 | cat /etc/passwd",
-			expectedError: "URL contains prohibited characters", 
+			expectedError: "URL contains prohibited characters",
 			shouldFail:    true,
 		},
 		{
@@ -64,13 +65,13 @@ func TestFFmpegService_URLValidation_CommandInjectionPrevention(t *testing.T) {
 		{
 			name:          "File protocol injection",
 			maliciousURL:  "file:///etc/passwd",
-			expectedError: "Protocol not allowed",
+			expectedError: "protocol not allowed",
 			shouldFail:    true,
 		},
 		{
 			name:          "Data URI injection",
 			maliciousURL:  "data:text/plain;base64,SGVsbG8gV29ybGQ=",
-			expectedError: "Protocol not allowed",
+			expectedError: "protocol not allowed",
 			shouldFail:    true,
 		},
 	}
@@ -79,7 +80,7 @@ func TestFFmpegService_URLValidation_CommandInjectionPrevention(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Test URL validation directly
 			err := service.ValidateURL(tt.maliciousURL)
-			
+
 			if tt.shouldFail {
 				require.Error(t, err, "Expected validation to fail for malicious URL")
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -97,7 +98,7 @@ func TestFFmpegService_URLValidation_ValidURLs(t *testing.T) {
 			Timeout:    time.Minute * 5,
 		},
 	}
-	
+
 	mockLogger := &NoopLogger{}
 	service := &ffmpegService{
 		cfg: cfg,
@@ -126,7 +127,7 @@ func TestFFmpegService_InputSanitization(t *testing.T) {
 			Timeout:    time.Minute * 5,
 		},
 	}
-	
+
 	mockLogger := &NoopLogger{}
 	service := &ffmpegService{
 		cfg: cfg,
@@ -158,8 +159,8 @@ func TestFFmpegService_InputSanitization(t *testing.T) {
 			shouldFail:     false,
 		},
 		{
-			name:      "Reject if only malicious content",
-			input:     "; rm -rf /",
+			name:       "Reject if only malicious content",
+			input:      "; rm -rf /",
 			shouldFail: true,
 		},
 	}
@@ -167,7 +168,7 @@ func TestFFmpegService_InputSanitization(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sanitized, err := service.SanitizeInput(tt.input)
-			
+
 			if tt.shouldFail {
 				require.Error(t, err, "Expected sanitization to fail for malicious input")
 			} else {
@@ -185,14 +186,14 @@ func TestFFmpegService_BuildCommand_WithMaliciousURLs(t *testing.T) {
 			Timeout:    time.Minute * 5,
 		},
 	}
-	
+
 	mockLogger := &NoopLogger{}
 	service := &ffmpegService{
 		cfg: cfg,
 		log: mockLogger,
 	}
 
-	// Create a config with malicious URLs  
+	// Create a config with malicious URLs
 	videoConfig := models.VideoConfigArray{
 		{
 			Scenes: []models.Scene{
@@ -203,7 +204,7 @@ func TestFFmpegService_BuildCommand_WithMaliciousURLs(t *testing.T) {
 							Src:  "http://example.com/audio.wav | cat /etc/passwd",
 						},
 						{
-							Type: "image", 
+							Type: "image",
 							Src:  "http://example.com/img.jpg`whoami`",
 						},
 					},
@@ -231,7 +232,7 @@ func TestFFmpegService_URLAllowlist(t *testing.T) {
 			},
 		},
 	}
-	
+
 	mockLogger := &NoopLogger{}
 	service := &ffmpegService{
 		cfg: cfg,
@@ -249,7 +250,7 @@ func TestFFmpegService_URLAllowlist(t *testing.T) {
 			shouldPass: true,
 		},
 		{
-			name:       "Another allowed domain should pass", 
+			name:       "Another allowed domain should pass",
 			url:        "https://cdn.trusted.org/audio.wav",
 			shouldPass: true,
 		},
@@ -260,7 +261,7 @@ func TestFFmpegService_URLAllowlist(t *testing.T) {
 		},
 		{
 			name:       "Unknown domain should fail",
-			url:        "https://unknown.com/video.mp4", 
+			url:        "https://unknown.com/video.mp4",
 			shouldPass: false,
 		},
 	}
@@ -268,7 +269,7 @@ func TestFFmpegService_URLAllowlist(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := service.ValidateURLAllowlist(tt.url)
-			
+
 			if tt.shouldPass {
 				assert.NoError(t, err, "URL from allowed domain should pass")
 			} else {
@@ -283,14 +284,14 @@ func TestFFmpegService_URLAllowlist(t *testing.T) {
 type NoopLogger struct{}
 
 func (n *NoopLogger) Debug(args ...interface{}) {}
-func (n *NoopLogger) Info(args ...interface{}) {}
-func (n *NoopLogger) Warn(args ...interface{}) {}
+func (n *NoopLogger) Info(args ...interface{})  {}
+func (n *NoopLogger) Warn(args ...interface{})  {}
 func (n *NoopLogger) Error(args ...interface{}) {}
 func (n *NoopLogger) Fatal(args ...interface{}) {}
 
 func (n *NoopLogger) Debugf(format string, args ...interface{}) {}
-func (n *NoopLogger) Infof(format string, args ...interface{}) {}
-func (n *NoopLogger) Warnf(format string, args ...interface{}) {}
+func (n *NoopLogger) Infof(format string, args ...interface{})  {}
+func (n *NoopLogger) Warnf(format string, args ...interface{})  {}
 func (n *NoopLogger) Errorf(format string, args ...interface{}) {}
 func (n *NoopLogger) Fatalf(format string, args ...interface{}) {}
 

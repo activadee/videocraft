@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/errors"
 	"github.com/activadee/videocraft/internal/domain/models"
@@ -18,19 +19,19 @@ type VideoHandler struct {
 	log      logger.Logger
 }
 
-func NewVideoHandler(cfg *config.Config, services *services.Services, log logger.Logger) *VideoHandler {
+func NewVideoHandler(cfg *config.Config, svcContainer *services.Services, log logger.Logger) *VideoHandler {
 	return &VideoHandler{
 		cfg:      cfg,
-		services: services,
+		services: svcContainer,
 		log:      log,
 	}
 }
 
 // GenerateVideo handles POST /generate-video
 func (h *VideoHandler) GenerateVideo(c *gin.Context) {
-	var config models.VideoConfigArray
+	var videoConfig models.VideoConfigArray
 
-	if err := c.ShouldBindJSON(&config); err != nil {
+	if err := c.ShouldBindJSON(&videoConfig); err != nil {
 		h.log.Debugf("Invalid request body: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid request body",
@@ -40,7 +41,7 @@ func (h *VideoHandler) GenerateVideo(c *gin.Context) {
 	}
 
 	// Validate configuration
-	if err := config.Validate(); err != nil {
+	if err := videoConfig.Validate(); err != nil {
 		h.log.Debugf("Invalid configuration: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid configuration",
@@ -50,10 +51,10 @@ func (h *VideoHandler) GenerateVideo(c *gin.Context) {
 	}
 
 	// Create job
-	job, err := h.services.Job.CreateJob(&config)
+	job, err := h.services.Job.CreateJob(&videoConfig)
 	if err != nil {
 		h.log.Errorf("Failed to create job: %v", err)
-		
+
 		if vpe, ok := err.(*errors.VideoProcessingError); ok {
 			status := http.StatusInternalServerError
 			if vpe.Code == errors.ErrCodeInvalidInput {
@@ -97,7 +98,7 @@ func (h *VideoHandler) DownloadVideo(c *gin.Context) {
 	videoPath, err := h.services.Storage.GetVideo(videoID)
 	if err != nil {
 		h.log.Debugf("Video not found: %s", videoID)
-		
+
 		if vpe, ok := err.(*errors.VideoProcessingError); ok {
 			status := http.StatusInternalServerError
 			if vpe.Code == errors.ErrCodeFileNotFound {

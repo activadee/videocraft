@@ -45,7 +45,7 @@ func RateLimit(requestsPerMinute int) gin.HandlerFunc {
 		}
 
 		ip := c.ClientIP()
-		
+
 		if !rl.allow(ip) {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error": "Rate limit exceeded",
@@ -85,12 +85,12 @@ func (tb *tokenBucket) allow() bool {
 	defer tb.mu.Unlock()
 
 	now := time.Now()
-	
+
 	// Refill tokens based on time elapsed
 	if now.After(tb.refill) {
 		elapsed := now.Sub(tb.refill)
 		tokensToAdd := int(elapsed.Minutes())
-		
+
 		if tokensToAdd > 0 {
 			tb.tokens += tokensToAdd
 			if tb.tokens > tb.capacity {
@@ -112,14 +112,14 @@ func (tb *tokenBucket) allow() bool {
 func (rl *rateLimiter) cleanupVisitors() {
 	for range rl.cleanup.C {
 		rl.mu.Lock()
-		
+
 		cutoff := time.Now().Add(-5 * time.Minute)
 		for ip, v := range rl.visitors {
 			if v.lastSeen.Before(cutoff) {
 				delete(rl.visitors, ip)
 			}
 		}
-		
+
 		rl.mu.Unlock()
 	}
 }

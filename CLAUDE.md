@@ -940,21 +940,49 @@ func TestVideoGeneration_EndToEnd(t *testing.T) {
 
 ### Code Quality
 
+The project uses a modernized CI/CD pipeline with parallel job execution for faster feedback:
+
+#### Local Development Commands
 ```bash
-# Linting
+# Linting (matches CI lint job with golangci-lint v2.1.6)
 golangci-lint run
 
-# Testing with coverage
+# Testing with coverage (matches CI test job)
 go test -v -race -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out
 
-# Security scanning
+# Security scanning (matches CI security job)
 gosec ./...
+govulncheck ./...
 
 # Dependency checking
 go mod tidy
 go mod verify
+
+# Run all quality checks (comprehensive validation)
+make quality-check
 ```
+
+#### CI/CD Pipeline Structure
+The GitHub Actions workflow runs parallel jobs for optimal performance with 2025 best practices:
+
+**Job Architecture:**
+- **Lint Job**: golangci-lint v2.1.6 + go vet (10min timeout)
+- **Test Job**: Unit tests with coverage reporting (30min timeout)
+- **Integration Job**: Integration tests with real dependencies (20min timeout, depends on test)
+- **Security Job**: Security scans (gosec, govulncheck) (15min timeout)
+- **Coverage Job**: Codecov upload (depends on test)
+- **Benchmark Job**: Performance benchmarks (15min timeout, depends on test)
+- **Docker Job**: Container build and test (10min timeout, depends on test)
+
+**Key Features:**
+- **Go 1.24.4** with built-in caching via setup-go@v5
+- **Parallel execution** reduces CI time by ~50%
+- **Concurrency control** cancels previous runs on PR updates
+- **Structured output** with JSON test results and coverage reports
+- **Artifact management** with retention policies (7-30 days)
+
+All jobs use proper permissions (`contents: read`) and timeout limits for security.
 
 ---
 

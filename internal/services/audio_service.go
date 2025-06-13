@@ -13,11 +13,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/errors"
 	"github.com/activadee/videocraft/internal/domain/models"
 	"github.com/activadee/videocraft/pkg/logger"
-	"github.com/google/uuid"
+)
+
+const (
+	elementTypeAudio = "audio"
+	fileExtensionMP3 = ".mp3"
 )
 
 type audioService struct {
@@ -56,7 +62,7 @@ func (s *audioService) CalculateSceneTiming(elements []models.Element) ([]models
 	// Extract audio elements and group by scene
 	audioElements := make([]models.Element, 0)
 	for _, element := range elements {
-		if element.Type == "audio" {
+		if element.Type == elementTypeAudio {
 			audioElements = append(audioElements, element)
 		}
 	}
@@ -100,7 +106,7 @@ func (s *audioService) DownloadAudio(ctx context.Context, url string) (string, e
 	downloadURL := s.resolveGoogleDriveURL(url)
 
 	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, http.NoBody)
 	if err != nil {
 		return "", errors.DownloadFailed(url, err)
 	}
@@ -127,8 +133,8 @@ func (s *audioService) DownloadAudio(ctx context.Context, url string) (string, e
 	tempFile := filepath.Join(s.cfg.Storage.TempDir, fmt.Sprintf("audio_%s%s", uuid.New().String()[:8], ext))
 
 	// Ensure temp directory exists
-	if err := os.MkdirAll(s.cfg.Storage.TempDir, 0755); err != nil {
-		return "", errors.StorageFailed(err)
+	if mkdirErr := os.MkdirAll(s.cfg.Storage.TempDir, 0755); mkdirErr != nil {
+		return "", errors.StorageFailed(mkdirErr)
 	}
 
 	// Create output file
@@ -187,7 +193,7 @@ func (s *audioService) getFileExtension(contentType, url string) string {
 		if strings.Contains(contentType, "wav") {
 			return ".wav"
 		} else if strings.Contains(contentType, "mp3") {
-			return ".mp3"
+			return fileExtensionMP3
 		} else if strings.Contains(contentType, "ogg") {
 			return ".ogg"
 		}
@@ -242,7 +248,7 @@ func (s *audioService) parseAudioInfo(jsonOutput, filePath string) (*AudioInfo, 
 	// Get audio stream info
 	var format string
 	for _, stream := range probe.Streams {
-		if stream.CodecType == "audio" {
+		if stream.CodecType == elementTypeAudio {
 			format = stream.CodecName
 			break
 		}
