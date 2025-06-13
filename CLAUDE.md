@@ -940,8 +940,11 @@ func TestVideoGeneration_EndToEnd(t *testing.T) {
 
 ### Code Quality
 
+The project uses a modernized CI/CD pipeline with parallel job execution for faster feedback:
+
+#### Local Development Commands
 ```bash
-# Linting
+# Linting (uses latest golangci-lint v2.1.6)
 golangci-lint run
 
 # Testing with coverage
@@ -950,11 +953,28 @@ go tool cover -html=coverage.out
 
 # Security scanning
 gosec ./...
+govulncheck ./...
 
 # Dependency checking
 go mod tidy
 go mod verify
+
+# Run all quality checks
+make quality-check
 ```
+
+#### CI/CD Pipeline Structure
+The GitHub Actions workflow runs parallel jobs for optimal performance:
+
+- **Lint Job**: golangci-lint v2.1.6 + go vet
+- **Test Job**: Unit tests with coverage reporting
+- **Integration Job**: Integration tests with real dependencies
+- **Security Job**: Security scans (gosec, govulncheck)
+- **Coverage Job**: Codecov upload
+- **Benchmark Job**: Performance benchmarks
+- **Docker Job**: Container build and test
+
+All jobs use Go 1.24.4 with built-in caching for faster execution.
 
 ---
 
