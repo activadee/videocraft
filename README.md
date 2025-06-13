@@ -258,7 +258,7 @@ videocraft/
 make build
 
 # Production build
-make build-prod
+make release-build
 
 # Run tests (matches CI test job)
 make test
@@ -273,7 +273,7 @@ make security
 make benchmark
 
 # Run integration tests (matches CI integration job)
-make integration
+make test-integration
 
 # Run all quality checks (comprehensive validation)
 make quality-check
