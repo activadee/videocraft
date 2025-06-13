@@ -24,6 +24,11 @@ on:
         required: true
         type: number
 
+# Cancel in-progress runs for pull requests when new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
