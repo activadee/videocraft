@@ -944,16 +944,25 @@ The project uses a modernized CI/CD pipeline with parallel job execution for fas
 
 #### Local Development Commands
 ```bash
-# Linting (matches CI lint job with golangci-lint v2.1.6)
+# Development environment setup (complete setup including Python dependencies)
+make dev-setup
+
+# Linting (CI uses golangci-lint v2.1.6 with golangci/golangci-lint-action@v8)
 golangci-lint run
 
-# Testing with coverage (matches CI test job)
-go test -v -race -coverprofile=coverage.out ./...
+# Testing with coverage (matches CI test job with JSON output)
+go test -v -race -coverprofile=coverage.out -json ./... > test-results.json
 go tool cover -html=coverage.out
 
-# Security scanning (matches CI security job)
+# Security scanning (matches CI security job with latest versions)
 gosec ./...
 govulncheck ./...
+
+# Integration tests (matches CI integration job with tags)
+go test -v -tags=integration ./...
+
+# Benchmarks (matches CI benchmark job)
+go test -bench=. -benchmem ./...
 
 # Dependency checking
 go mod tidy

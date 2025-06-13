@@ -64,7 +64,7 @@ make build
 ./videocraft
 ```
 
-The server will start on `http://localhost:8080`
+The server will start on `http://localhost:3002`
 
 ## API Usage
 
@@ -205,12 +205,13 @@ Unlike simple concatenation approaches, VideoCraft uses **real audio file durati
 VideoCraft uses a modern GitHub Actions workflow with 2025 best practices and parallel job execution for fast feedback:
 
 ### Pipeline Features
-- **Parallel Job Execution**: 7 concurrent jobs for optimal performance
-- **Latest Tooling**: Go 1.24.4, golangci-lint v2.1.6, codecov-action v5
-- **Built-in Caching**: Automatic dependency caching with setup-go@v5
-- **Security Focus**: Comprehensive security scanning with gosec and govulncheck
-- **Performance Testing**: Automated benchmarks for regression detection
-- **Container Testing**: Docker build and functionality verification
+- **Parallel Job Execution**: 7 concurrent jobs for optimal performance (~50% faster CI time)
+- **Latest Tooling**: Go 1.24.4, golangci-lint v2.1.6, codecov-action v5, latest action versions
+- **Built-in Caching**: Automatic dependency caching with setup-go@v5 reduces setup time
+- **Security Focus**: Comprehensive security scanning with gosec and govulncheck (15min timeout)
+- **Performance Testing**: Automated benchmarks for regression detection (15min timeout)
+- **Container Testing**: Docker build and functionality verification (10min timeout)
+- **Concurrency Control**: Cancels previous runs on PR updates for efficiency
 
 ### Pipeline Jobs
 ```mermaid
@@ -260,10 +261,13 @@ make build
 # Production build
 make release-build
 
-# Run tests (matches CI test job)
+# Development environment setup (includes all dependencies)
+make dev-setup
+
+# Run tests (matches CI test job with coverage and JSON output)
 make test
 
-# Run linting (matches CI lint job with golangci-lint v2.1.6)
+# Run linting (uses golangci-lint - CI uses v2.1.6)
 make lint
 
 # Run security scans (matches CI security job - gosec + govulncheck)
@@ -272,7 +276,7 @@ make security
 # Run benchmarks (matches CI benchmark job)
 make benchmark
 
-# Run integration tests (matches CI integration job)
+# Run integration tests (matches CI integration job with tags)
 make test-integration
 
 # Run all quality checks (comprehensive validation)
