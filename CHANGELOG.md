@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error Handling**: Comprehensive error handling and reporting
 
 ### Technical Implementation
-- **Go**: Backend implemented in Go 1.24+ with clean architecture (tested with Go 1.24.4)
+- **Go**: Backend implemented in Go 1.24+ with clean architecture (CI uses Go 1.24.4)
 - **Python Integration**: Python Whisper daemon for AI transcription
 - **FFmpeg**: Video processing using FFmpeg with complex filter chains
 - **Docker**: Containerized deployment with multi-stage builds

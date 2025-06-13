@@ -34,7 +34,7 @@ VideoCraft is a high-performance Go-based video generation platform that creates
 ## Quick Start
 
 ### Prerequisites
-- Go 1.24+ (tested with Go 1.24.4)
+- Go 1.24+ (CI uses Go 1.24.4)
 - FFmpeg
 - Python 3.8+ (for Whisper daemon)
 - Docker (optional)

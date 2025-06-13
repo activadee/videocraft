@@ -944,14 +944,14 @@ The project uses a modernized CI/CD pipeline with parallel job execution for fas
 
 #### Local Development Commands
 ```bash
-# Linting (uses latest golangci-lint v2.1.6)
+# Linting (matches CI lint job with golangci-lint v2.1.6)
 golangci-lint run
 
-# Testing with coverage
+# Testing with coverage (matches CI test job)
 go test -v -race -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out
 
-# Security scanning
+# Security scanning (matches CI security job)
 gosec ./...
 govulncheck ./...
 
@@ -959,7 +959,7 @@ govulncheck ./...
 go mod tidy
 go mod verify
 
-# Run all quality checks
+# Run all quality checks (comprehensive validation)
 make quality-check
 ```
 
