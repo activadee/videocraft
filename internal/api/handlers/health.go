@@ -6,22 +6,23 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/services"
 	"github.com/activadee/videocraft/pkg/logger"
 )
 
 type HealthHandler struct {
-	cfg      *config.Config
-	services *services.Services
-	log      logger.Logger
+	cfg       *config.Config
+	services  *services.Services
+	log       logger.Logger
 	startTime time.Time
 }
 
-func NewHealthHandler(cfg *config.Config, services *services.Services, log logger.Logger) *HealthHandler {
+func NewHealthHandler(cfg *config.Config, svcContainer *services.Services, log logger.Logger) *HealthHandler {
 	return &HealthHandler{
 		cfg:       cfg,
-		services:  services,
+		services:  svcContainer,
 		log:       log,
 		startTime: time.Now(),
 	}
@@ -49,22 +50,22 @@ func (h *HealthHandler) HealthDetailed(c *gin.Context) {
 		"time":   time.Now().UTC(),
 		"uptime": uptime.String(),
 		"system": gin.H{
-			"go_version":    runtime.Version(),
-			"goroutines":    runtime.NumGoroutine(),
+			"go_version": runtime.Version(),
+			"goroutines": runtime.NumGoroutine(),
 			"memory": gin.H{
-				"allocated":     m.Alloc,
-				"total_alloc":   m.TotalAlloc,
-				"sys":          m.Sys,
-				"heap_alloc":   m.HeapAlloc,
-				"heap_sys":     m.HeapSys,
-				"gc_cycles":    m.NumGC,
+				"allocated":   m.Alloc,
+				"total_alloc": m.TotalAlloc,
+				"sys":         m.Sys,
+				"heap_alloc":  m.HeapAlloc,
+				"heap_sys":    m.HeapSys,
+				"gc_cycles":   m.NumGC,
 			},
 		},
 		"config": gin.H{
-			"workers":      h.cfg.Job.Workers,
-			"queue_size":   h.cfg.Job.QueueSize,
-			"ffmpeg_path":  h.cfg.FFmpeg.BinaryPath,
-			"output_dir":   h.cfg.Storage.OutputDir,
+			"workers":     h.cfg.Job.Workers,
+			"queue_size":  h.cfg.Job.QueueSize,
+			"ffmpeg_path": h.cfg.FFmpeg.BinaryPath,
+			"output_dir":  h.cfg.Storage.OutputDir,
 		},
 	}
 
@@ -77,7 +78,7 @@ func (h *HealthHandler) Ready(c *gin.Context) {
 	// Check if services are ready
 	// For now, just return OK
 	// TODO: Add actual readiness checks (database, external services, etc.)
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ready",
 		"checks": gin.H{
@@ -104,7 +105,7 @@ func (h *HealthHandler) Metrics(c *gin.Context) {
 
 	// Get job statistics
 	jobs, _ := h.services.Job.ListJobs()
-	
+
 	jobStats := make(map[string]int)
 	for _, job := range jobs {
 		jobStats[string(job.Status)]++
@@ -112,7 +113,7 @@ func (h *HealthHandler) Metrics(c *gin.Context) {
 
 	// Get video statistics
 	videos, _ := h.services.Storage.ListVideos()
-	
+
 	var totalVideoSize int64
 	for _, video := range videos {
 		totalVideoSize += video.Size
@@ -122,18 +123,18 @@ func (h *HealthHandler) Metrics(c *gin.Context) {
 		"timestamp": time.Now().UTC(),
 		"uptime":    time.Since(h.startTime).Seconds(),
 		"memory": gin.H{
-			"allocated_mb":   float64(m.Alloc) / 1024 / 1024,
-			"heap_mb":       float64(m.HeapAlloc) / 1024 / 1024,
-			"gc_cycles":     m.NumGC,
+			"allocated_mb": float64(m.Alloc) / 1024 / 1024,
+			"heap_mb":      float64(m.HeapAlloc) / 1024 / 1024,
+			"gc_cycles":    m.NumGC,
 		},
 		"goroutines": runtime.NumGoroutine(),
 		"jobs": gin.H{
-			"total":      len(jobs),
-			"by_status":  jobStats,
+			"total":     len(jobs),
+			"by_status": jobStats,
 		},
 		"storage": gin.H{
-			"videos_count":    len(videos),
-			"total_size_mb":   float64(totalVideoSize) / 1024 / 1024,
+			"videos_count":  len(videos),
+			"total_size_mb": float64(totalVideoSize) / 1024 / 1024,
 		},
 	}
 
@@ -147,7 +148,7 @@ func (h *HealthHandler) checkStorageHealth() string {
 	if err != nil {
 		return "unhealthy: " + err.Error()
 	}
-	
+
 	return "healthy (" + string(rune(len(videos))) + " videos)"
 }
 

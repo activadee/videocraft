@@ -12,13 +12,13 @@ type Logger interface {
 	Warn(args ...interface{})
 	Error(args ...interface{})
 	Fatal(args ...interface{})
-	
+
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Warnf(format string, args ...interface{})
 	Errorf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
-	
+
 	WithField(key string, value interface{}) Logger
 	WithFields(fields map[string]interface{}) Logger
 }
@@ -30,7 +30,7 @@ type logger struct {
 func New(level string) Logger {
 	log := logrus.New()
 	log.SetOutput(os.Stdout)
-	
+
 	// Set log level
 	switch level {
 	case "debug":
@@ -44,13 +44,13 @@ func New(level string) Logger {
 	default:
 		log.SetLevel(logrus.InfoLevel)
 	}
-	
+
 	// Set formatter
 	log.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 		ForceColors:   true,
 	})
-	
+
 	return &logger{log: log}
 }
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/activadee/videocraft/internal/domain/errors"
 	"github.com/activadee/videocraft/pkg/logger"
 )
@@ -15,7 +16,7 @@ func ErrorHandler(log logger.Logger) gin.HandlerFunc {
 		// Handle errors if any occurred
 		if len(c.Errors) > 0 {
 			err := c.Errors.Last()
-			
+
 			log.WithField("error", err.Error()).Error("Request error")
 
 			// Check if it's our custom error type

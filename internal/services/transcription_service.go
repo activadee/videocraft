@@ -11,10 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/errors"
 	"github.com/activadee/videocraft/pkg/logger"
-	"github.com/google/uuid"
 )
 
 type transcriptionService struct {
@@ -57,12 +58,12 @@ type TranscriptionResponse struct {
 	WordTimestamps []WhisperWordTimestamp `json:"word_timestamps,omitempty"`
 	Error          string                 `json:"error,omitempty"`
 	Traceback      string                 `json:"traceback,omitempty"`
-	
+
 	// Status response fields
-	ModelLoaded    bool   `json:"model_loaded,omitempty"`
-	Model          string `json:"model,omitempty"`
-	Device         string `json:"device,omitempty"`
-	Message        string `json:"message,omitempty"`
+	ModelLoaded bool   `json:"model_loaded,omitempty"`
+	Model       string `json:"model,omitempty"`
+	Device      string `json:"device,omitempty"`
+	Message     string `json:"message,omitempty"`
 }
 
 type WhisperSegment struct {
@@ -404,7 +405,9 @@ func (ts *transcriptionService) stopDaemon() {
 			Action: "shutdown",
 		}
 		if requestJSON, err := json.Marshal(shutdownRequest); err == nil {
-			ts.daemon.stdin.Write(append(requestJSON, '\n'))
+			if _, writeErr := ts.daemon.stdin.Write(append(requestJSON, '\n')); writeErr != nil {
+				ts.log.Errorf("Failed to write shutdown request: %v", writeErr)
+			}
 		}
 	}
 
@@ -430,7 +433,9 @@ func (ts *transcriptionService) stopDaemon() {
 		ts.log.Info("Daemon stopped gracefully")
 	case <-time.After(10 * time.Second):
 		ts.log.Warn("Daemon shutdown timeout, killing process")
-		ts.daemon.cmd.Process.Kill()
+		if killErr := ts.daemon.cmd.Process.Kill(); killErr != nil {
+			ts.log.Errorf("Failed to kill daemon process: %v", killErr)
+		}
 	}
 
 	ts.daemon = nil

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/activadee/videocraft/pkg/logger"
 )
 

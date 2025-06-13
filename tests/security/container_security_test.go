@@ -29,13 +29,13 @@ type DockerComposeService struct {
 			} `yaml:"reservations,omitempty"`
 		} `yaml:"resources,omitempty"`
 	} `yaml:"deploy,omitempty"`
-	User    string `yaml:"user,omitempty"`
-	Tmpfs   []string `yaml:"tmpfs,omitempty"`
+	User  string   `yaml:"user,omitempty"`
+	Tmpfs []string `yaml:"tmpfs,omitempty"`
 }
 
 // DockerCompose represents the docker-compose.yml structure
 type DockerCompose struct {
-	Version  string                           `yaml:"version"`
+	Version  string                          `yaml:"version"`
 	Services map[string]DockerComposeService `yaml:"services"`
 }
 
@@ -73,10 +73,10 @@ func TestContainerSecurityContext(t *testing.T) {
 	t.Run("SecurityContextsEnforced", func(t *testing.T) {
 		// Test that security options are configured
 		assert.NotEmpty(t, service.SecurityOpt, "Security options should be configured")
-		
+
 		// Check for specific security options
 		securityOptString := strings.Join(service.SecurityOpt, " ")
-		assert.Contains(t, securityOptString, "no-new-privileges", 
+		assert.Contains(t, securityOptString, "no-new-privileges",
 			"no-new-privileges should be enabled")
 	})
 
@@ -88,11 +88,11 @@ func TestContainerSecurityContext(t *testing.T) {
 	t.Run("CapabilitiesDropped", func(t *testing.T) {
 		// Test that unnecessary capabilities are dropped
 		assert.NotEmpty(t, service.CapDrop, "Capabilities should be dropped")
-		
+
 		// Check for specific dangerous capabilities that should be dropped
 		capDropString := strings.Join(service.CapDrop, " ")
 		dangerousCaps := []string{"ALL", "NET_RAW", "SYS_ADMIN", "SYS_PTRACE"}
-		
+
 		hasDroppedDangerousCaps := false
 		for _, cap := range dangerousCaps {
 			if strings.Contains(capDropString, cap) {
@@ -100,15 +100,15 @@ func TestContainerSecurityContext(t *testing.T) {
 				break
 			}
 		}
-		assert.True(t, hasDroppedDangerousCaps, 
+		assert.True(t, hasDroppedDangerousCaps,
 			"Dangerous capabilities should be dropped")
 	})
 
 	t.Run("ResourceLimitsConfigured", func(t *testing.T) {
 		// Test that resource limits are configured
-		assert.NotEmpty(t, service.Deploy.Resources.Limits.Memory, 
+		assert.NotEmpty(t, service.Deploy.Resources.Limits.Memory,
 			"Memory limits should be configured")
-		assert.NotEmpty(t, service.Deploy.Resources.Limits.CPUs, 
+		assert.NotEmpty(t, service.Deploy.Resources.Limits.CPUs,
 			"CPU limits should be configured")
 	})
 
@@ -127,7 +127,7 @@ func TestContainerSecurityContext(t *testing.T) {
 func TestDockerfileSecurityContext(t *testing.T) {
 	data, err := os.ReadFile("../../Dockerfile")
 	require.NoError(t, err, "Failed to read Dockerfile")
-	
+
 	dockerfile := string(data)
 
 	t.Run("NonRootUserInDockerfile", func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestDockerfileSecurityContext(t *testing.T) {
 
 	t.Run("MinimalBaseImage", func(t *testing.T) {
 		// Test that production image uses minimal base (alpine)
-		assert.Contains(t, dockerfile, "FROM alpine:latest", 
+		assert.Contains(t, dockerfile, "FROM alpine:latest",
 			"Production image should use minimal alpine base")
 	})
 
@@ -146,7 +146,7 @@ func TestDockerfileSecurityContext(t *testing.T) {
 		// Test that minimal packages are installed
 		lines := strings.Split(dockerfile, "\n")
 		runtimePackages := []string{}
-		
+
 		inRuntimeSection := false
 		for _, line := range lines {
 			if strings.Contains(line, "# Final stage") {
@@ -157,7 +157,7 @@ func TestDockerfileSecurityContext(t *testing.T) {
 				runtimePackages = append(runtimePackages, line)
 			}
 		}
-		
+
 		// Should not contain development tools in runtime
 		for _, pkg := range runtimePackages {
 			assert.NotContains(t, pkg, "gcc", "Runtime should not contain gcc")
@@ -172,24 +172,24 @@ func TestCurrentSecurityViolations(t *testing.T) {
 	t.Run("ExpectedSecurityFailures", func(t *testing.T) {
 		// These tests document current security issues and should fail initially
 		// They will pass once security is properly implemented
-		
+
 		compose := loadDockerCompose(t)
 		service := compose.Services["videocraft"]
-		
+
 		// This should fail initially - no security options configured
-		assert.NotEmpty(t, service.SecurityOpt, 
+		assert.NotEmpty(t, service.SecurityOpt,
 			"EXPECTED FAILURE: Security options not yet configured")
-		
+
 		// This should fail initially - read-only filesystem not configured
-		assert.True(t, service.ReadOnly, 
+		assert.True(t, service.ReadOnly,
 			"EXPECTED FAILURE: Read-only filesystem not yet configured")
-		
+
 		// This should fail initially - capabilities not dropped
-		assert.NotEmpty(t, service.CapDrop, 
+		assert.NotEmpty(t, service.CapDrop,
 			"EXPECTED FAILURE: Capabilities not yet dropped")
-		
+
 		// This should fail initially - resource limits not configured
-		assert.NotEmpty(t, service.Deploy.Resources.Limits.Memory, 
+		assert.NotEmpty(t, service.Deploy.Resources.Limits.Memory,
 			"EXPECTED FAILURE: Resource limits not yet configured")
 	})
 }

@@ -6,10 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/activadee/videocraft/internal/config"
-	"github.com/activadee/videocraft/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/activadee/videocraft/internal/config"
+	"github.com/activadee/videocraft/pkg/logger"
 )
 
 func TestStorageService_PathTraversalPrevention(t *testing.T) {

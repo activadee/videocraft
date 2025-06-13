@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/activadee/videocraft/internal/config"
-	"github.com/activadee/videocraft/internal/domain/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/activadee/videocraft/internal/config"
+	"github.com/activadee/videocraft/internal/domain/models"
 )
 
 func TestFFmpegService_SecurityEdgeCases(t *testing.T) {
