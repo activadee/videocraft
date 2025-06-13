@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/errors"
 	"github.com/activadee/videocraft/internal/domain/models"
@@ -21,10 +22,10 @@ type jobService struct {
 	transcription TranscriptionService
 	storage       StorageService
 
-	jobs      map[string]*models.Job
-	mu        sync.RWMutex
-	jobQueue  chan *models.Job
-	workers   int
+	jobs     map[string]*models.Job
+	mu       sync.RWMutex
+	jobQueue chan *models.Job
+	workers  int
 }
 
 func newJobService(
@@ -185,7 +186,9 @@ func (js *jobService) ProcessJob(ctx context.Context, job *models.Job) error {
 	progressChan := make(chan int, 10)
 	go func() {
 		for progress := range progressChan {
-			js.UpdateJobProgress(job.ID, progress)
+			if err := js.UpdateJobProgress(job.ID, progress); err != nil {
+				js.log.Errorf("Failed to update job progress: %v", err)
+			}
 		}
 	}()
 
@@ -194,14 +197,18 @@ func (js *jobService) ProcessJob(ctx context.Context, job *models.Job) error {
 	// Note: progressChan is closed by the FFmpeg service
 
 	if err != nil {
-		js.UpdateJobStatus(job.ID, models.JobStatusFailed, err.Error())
+		if updateErr := js.UpdateJobStatus(job.ID, models.JobStatusFailed, err.Error()); updateErr != nil {
+			js.log.Errorf("Failed to update job status to failed: %v", updateErr)
+		}
 		return err
 	}
 
 	// Store the generated video
 	videoID, err := js.storage.StoreVideo(videoPath)
 	if err != nil {
-		js.UpdateJobStatus(job.ID, models.JobStatusFailed, err.Error())
+		if updateErr := js.UpdateJobStatus(job.ID, models.JobStatusFailed, err.Error()); updateErr != nil {
+			js.log.Errorf("Failed to update job status to failed: %v", updateErr)
+		}
 		return err
 	}
 

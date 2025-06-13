@@ -4,11 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/models"
 	"github.com/activadee/videocraft/pkg/logger"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFFmpegService_URLValidation_CommandInjectionPrevention(t *testing.T) {

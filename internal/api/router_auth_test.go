@@ -6,11 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/models"
 	"github.com/activadee/videocraft/internal/services"
 	"github.com/activadee/videocraft/pkg/logger"
-	"github.com/stretchr/testify/assert"
 )
 
 // mockServices provides a minimal services implementation for testing
@@ -105,12 +106,12 @@ func TestRouter_AuthenticationEnforcementByDefault(t *testing.T) {
 		}
 
 		services := createMockServices()
-		logger := createNoopLogger()
+		testLogger := createNoopLogger()
 
-		router := NewRouter(cfg, services, logger)
+		router := NewRouter(cfg, services, testLogger)
 
 		// Test protected endpoint without authentication
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/generate-video", nil)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/generate-video", http.NoBody)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -134,15 +135,15 @@ func TestRouter_AuthenticationEnforcementByDefault(t *testing.T) {
 		}
 
 		services := createMockServices()
-		logger := createNoopLogger()
+		testLogger := createNoopLogger()
 
-		router := NewRouter(cfg, services, logger)
+		router := NewRouter(cfg, services, testLogger)
 
 		// Test health endpoints
 		healthEndpoints := []string{"/health", "/ready", "/live", "/metrics"}
 
 		for _, endpoint := range healthEndpoints {
-			req, _ := http.NewRequest(http.MethodGet, endpoint, nil)
+			req, _ := http.NewRequest(http.MethodGet, endpoint, http.NoBody)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, req)
@@ -167,12 +168,12 @@ func TestRouter_AuthenticationEnforcementByDefault(t *testing.T) {
 		}
 
 		services := createMockServices()
-		logger := createNoopLogger()
+		testLogger := createNoopLogger()
 
-		router := NewRouter(cfg, services, logger)
+		router := NewRouter(cfg, services, testLogger)
 
 		// Test with correct authentication
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/videos", nil)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/videos", http.NoBody)
 		req.Header.Set("Authorization", "Bearer test-api-key-12345678901234567890123456789012")
 		w := httptest.NewRecorder()
 
@@ -198,9 +199,9 @@ func TestRouter_LegacyEndpointsRequireAuth(t *testing.T) {
 		}
 
 		services := createMockServices()
-		logger := createNoopLogger()
+		testLogger := createNoopLogger()
 
-		router := NewRouter(cfg, services, logger)
+		router := NewRouter(cfg, services, testLogger)
 
 		// Test legacy endpoints without auth
 		legacyEndpoints := []string{
@@ -209,7 +210,7 @@ func TestRouter_LegacyEndpointsRequireAuth(t *testing.T) {
 		}
 
 		for _, endpoint := range legacyEndpoints {
-			req, _ := http.NewRequest(http.MethodGet, endpoint, nil)
+			req, _ := http.NewRequest(http.MethodGet, endpoint, http.NoBody)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, req)

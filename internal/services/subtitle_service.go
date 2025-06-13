@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/errors"
 	"github.com/activadee/videocraft/internal/domain/models"
@@ -15,11 +16,15 @@ import (
 	"github.com/activadee/videocraft/pkg/subtitle"
 )
 
+const (
+	subtitleStyleProgressive = "progressive"
+)
+
 type subtitleService struct {
-	cfg             *config.Config
-	log             logger.Logger
-	transcription   TranscriptionService
-	audio           AudioService
+	cfg           *config.Config
+	log           logger.Logger
+	transcription TranscriptionService
+	audio         AudioService
 }
 
 type SubtitleResult struct {
@@ -107,7 +112,7 @@ func (ss *subtitleService) GenerateSubtitles(ctx context.Context, project models
 		Style:              ss.cfg.Subtitles.Style,
 	}
 
-	ss.log.Infof("Subtitles generated successfully: %d events, %s style, file: %s", 
+	ss.log.Infof("Subtitles generated successfully: %d events, %s style, file: %s",
 		len(events), ss.cfg.Subtitles.Style, filePath)
 
 	return result, nil
@@ -115,7 +120,7 @@ func (ss *subtitleService) GenerateSubtitles(ctx context.Context, project models
 
 func (ss *subtitleService) collectAudioElements(project models.VideoProject) []models.Element {
 	var audioElements []models.Element
-	
+
 	// Collect from scenes in order
 	for _, scene := range project.Scenes {
 		for _, element := range scene.Elements {
@@ -124,16 +129,16 @@ func (ss *subtitleService) collectAudioElements(project models.VideoProject) []m
 			}
 		}
 	}
-	
+
 	return audioElements
 }
 
 func (ss *subtitleService) transcribeAudioElements(ctx context.Context, audioElements []models.Element) ([]*TranscriptionResult, error) {
 	var results []*TranscriptionResult
-	
+
 	for i, audio := range audioElements {
 		ss.log.Debugf("Transcribing audio %d/%d: %s", i+1, len(audioElements), audio.Src)
-		
+
 		result, err := ss.transcription.TranscribeAudio(ctx, audio.Src)
 		if err != nil {
 			ss.log.Warnf("Failed to transcribe audio %d: %v", i, err)
@@ -143,32 +148,32 @@ func (ss *subtitleService) transcribeAudioElements(ctx context.Context, audioEle
 				Success: false,
 			}
 		}
-		
+
 		results = append(results, result)
 	}
-	
+
 	return results, nil
 }
 
 func (ss *subtitleService) generateSubtitleEvents(
-	project models.VideoProject, 
-	transcriptionResults []*TranscriptionResult, 
+	project models.VideoProject,
+	transcriptionResults []*TranscriptionResult,
 	audioElements []models.Element,
 ) ([]subtitle.SubtitleEvent, error) {
 	var allEvents []subtitle.SubtitleEvent
-	
+
 	// Calculate scene timings based on actual audio durations (like Python implementation)
 	sceneTimings, err := ss.calculateSceneTimings(transcriptionResults, audioElements)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate scene timings: %w", err)
 	}
-	
+
 	for i, transcriptionResult := range transcriptionResults {
 		if !transcriptionResult.Success || transcriptionResult.Text == "" {
 			ss.log.Debugf("Skipping failed transcription %d", i)
 			continue
 		}
-		
+
 		// Get scene timing for this transcription
 		var sceneTiming models.TimingSegment
 		if i < len(sceneTimings) {
@@ -181,11 +186,11 @@ func (ss *subtitleService) generateSubtitleEvents(
 				AudioFile: "",
 			}
 		}
-		
+
 		var events []subtitle.SubtitleEvent
-		
+
 		// Generate events based on style
-		if ss.cfg.Subtitles.Style == "progressive" && len(transcriptionResult.WordTimestamps) > 0 {
+		if ss.cfg.Subtitles.Style == subtitleStyleProgressive && len(transcriptionResult.WordTimestamps) > 0 {
 			// Progressive style - word by word with scene timing
 			words := make([]subtitle.WordTimestamp, len(transcriptionResult.WordTimestamps))
 			for j, wt := range transcriptionResult.WordTimestamps {
@@ -202,23 +207,23 @@ func (ss *subtitleService) generateSubtitleEvents(
 			sceneDuration := time.Duration((sceneTiming.EndTime - sceneTiming.StartTime) * float64(time.Second))
 			events = subtitle.CreateClassicEvents(transcriptionResult.Text, sceneStartTime, sceneDuration)
 		}
-		
+
 		allEvents = append(allEvents, events...)
 	}
-	
+
 	return allEvents, nil
 }
 
 func (ss *subtitleService) calculateSceneTimings(transcriptionResults []*TranscriptionResult, audioElements []models.Element) ([]models.TimingSegment, error) {
 	ss.log.Debug("Calculating scene timings based on actual audio file durations (like Python ffprobe)")
-	
+
 	var timings []models.TimingSegment
 	currentTime := 0.0
-	
+
 	for i := range transcriptionResults {
 		// Get REAL audio file duration using AudioService (like Python ffprobe)
 		var duration float64
-		
+
 		if i < len(audioElements) {
 			// Use AudioService to analyze actual audio file duration
 			ctx := context.Background()
@@ -233,20 +238,20 @@ func (ss *subtitleService) calculateSceneTimings(transcriptionResults []*Transcr
 		} else {
 			duration = 30.0 // Default fallback
 		}
-		
+
 		timing := models.TimingSegment{
 			StartTime: currentTime,
 			EndTime:   currentTime + duration,
 			AudioFile: audioElements[i].Src,
 		}
-		
+
 		timings = append(timings, timing)
 		currentTime += duration
-		
-		ss.log.Debugf("Scene %d timing: %.2fs - %.2fs (real file duration: %.2fs)", 
+
+		ss.log.Debugf("Scene %d timing: %.2fs - %.2fs (real file duration: %.2fs)",
 			i, timing.StartTime, timing.EndTime, duration)
 	}
-	
+
 	ss.log.Debugf("Calculated %d scene timings with total duration: %.2fs", len(timings), currentTime)
 	return timings, nil
 }
@@ -261,11 +266,11 @@ func (ss *subtitleService) createASSFile(events []subtitle.SubtitleEvent) (strin
 	if err := os.MkdirAll(ss.cfg.Storage.TempDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	
+
 	// Generate unique filename
 	filename := fmt.Sprintf("subtitles_%s.ass", uuid.New().String()[:8])
 	filePath := filepath.Join(ss.cfg.Storage.TempDir, filename)
-	
+
 	// Create ASS generator with configuration
 	assConfig := subtitle.ASSConfig{
 		FontFamily:   ss.cfg.Subtitles.FontFamily,
@@ -276,17 +281,17 @@ func (ss *subtitleService) createASSFile(events []subtitle.SubtitleEvent) (strin
 		OutlineWidth: 2, // Default outline width
 		ShadowOffset: 1, // Default shadow offset
 	}
-	
+
 	generator := subtitle.NewASSGenerator(assConfig)
-	
+
 	// Generate ASS content
 	assContent := generator.GenerateASS(events)
-	
+
 	// Write to file
 	if err := os.WriteFile(filePath, []byte(assContent), 0644); err != nil {
 		return "", fmt.Errorf("failed to write ASS file: %w", err)
 	}
-	
+
 	ss.log.Debugf("ASS file created: %s", filePath)
 	return filePath, nil
 }
@@ -295,26 +300,26 @@ func (ss *subtitleService) ValidateSubtitleConfig(project models.VideoProject) e
 	if !ss.cfg.Subtitles.Enabled {
 		return nil
 	}
-	
+
 	// Check font size
 	if ss.cfg.Subtitles.FontSize < 10 || ss.cfg.Subtitles.FontSize > 200 {
 		return errors.InvalidInput("font size must be between 10 and 200")
 	}
-	
+
 	// Validate colors
 	if !ss.isValidHexColor(ss.cfg.Subtitles.Colors.Word) {
 		return errors.InvalidInput("invalid word color format")
 	}
-	
+
 	if !ss.isValidHexColor(ss.cfg.Subtitles.Colors.Outline) {
 		return errors.InvalidInput("invalid outline color format")
 	}
-	
+
 	// Validate style
 	if ss.cfg.Subtitles.Style != "progressive" && ss.cfg.Subtitles.Style != "classic" {
 		return errors.InvalidInput("subtitle style must be 'progressive' or 'classic'")
 	}
-	
+
 	return nil
 }
 
@@ -322,13 +327,13 @@ func (ss *subtitleService) isValidHexColor(color string) bool {
 	if len(color) != 7 || color[0] != '#' {
 		return false
 	}
-	
+
 	for _, c := range color[1:] {
 		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -336,12 +341,12 @@ func (ss *subtitleService) CleanupTempFiles(filePath string) error {
 	if filePath == "" {
 		return nil
 	}
-	
+
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
 		ss.log.Warnf("Failed to cleanup subtitle file %s: %v", filePath, err)
 		return err
 	}
-	
+
 	ss.log.Debugf("Cleaned up subtitle file: %s", filePath)
 	return nil
 }

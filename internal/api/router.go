@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+
 	"github.com/activadee/videocraft/internal/api/handlers"
 	"github.com/activadee/videocraft/internal/api/middleware"
 	"github.com/activadee/videocraft/internal/config"
@@ -50,7 +51,7 @@ func setupMiddleware(router *gin.Engine, cfg *config.Config, log logger.Logger) 
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-		MaxAge:          12 * time.Hour,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	// Error handling middleware
@@ -82,22 +83,20 @@ func setupRoutes(
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
-	{
-		// Video generation
-		v1.POST("/generate-video", videoHandler.GenerateVideo)
+	// Video generation
+	v1.POST("/generate-video", videoHandler.GenerateVideo)
 
-		// Video management
-		v1.GET("/download/:video_id", videoHandler.DownloadVideo)
-		v1.GET("/status/:video_id", videoHandler.GetVideoStatus)
-		v1.GET("/videos", videoHandler.ListVideos)
-		v1.DELETE("/videos/:video_id", videoHandler.DeleteVideo)
+	// Video management
+	v1.GET("/download/:video_id", videoHandler.DownloadVideo)
+	v1.GET("/status/:video_id", videoHandler.GetVideoStatus)
+	v1.GET("/videos", videoHandler.ListVideos)
+	v1.DELETE("/videos/:video_id", videoHandler.DeleteVideo)
 
-		// Job management
-		v1.GET("/jobs", jobHandler.ListJobs)
-		v1.GET("/jobs/:job_id", jobHandler.GetJob)
-		v1.GET("/jobs/:job_id/status", jobHandler.GetJobStatus)
-		v1.POST("/jobs/:job_id/cancel", jobHandler.CancelJob)
-	}
+	// Job management
+	v1.GET("/jobs", jobHandler.ListJobs)
+	v1.GET("/jobs/:job_id", jobHandler.GetJob)
+	v1.GET("/jobs/:job_id/status", jobHandler.GetJobStatus)
+	v1.POST("/jobs/:job_id/cancel", jobHandler.CancelJob)
 
 	// Legacy routes (for backward compatibility with Python version)
 	router.POST("/generate-video", videoHandler.GenerateVideo)
@@ -125,25 +124,25 @@ func setupRoutes(
 					"GET /metrics":         "System metrics",
 				},
 				"video_generation": gin.H{
-					"POST /generate-video":            "Start video generation job",
-					"POST /api/v1/generate-video":     "Start video generation job (v1)",
+					"POST /generate-video":        "Start video generation job",
+					"POST /api/v1/generate-video": "Start video generation job (v1)",
 				},
 				"video_management": gin.H{
-					"GET /download/:video_id":         "Download generated video",
-					"GET /status/:video_id":           "Get video status",
-					"GET /videos":                     "List all videos",
-					"DELETE /videos/:video_id":        "Delete video",
+					"GET /download/:video_id":  "Download generated video",
+					"GET /status/:video_id":    "Get video status",
+					"GET /videos":              "List all videos",
+					"DELETE /videos/:video_id": "Delete video",
 				},
 				"job_management": gin.H{
-					"GET /jobs":                       "List all jobs",
-					"GET /jobs/:job_id":               "Get job details",
-					"GET /jobs/:job_id/status":        "Get job status",
-					"POST /jobs/:job_id/cancel":       "Cancel job",
+					"GET /jobs":                 "List all jobs",
+					"GET /jobs/:job_id":         "Get job details",
+					"GET /jobs/:job_id/status":  "Get job status",
+					"POST /jobs/:job_id/cancel": "Cancel job",
 				},
 			},
 			"examples": gin.H{
 				"generate_video": gin.H{
-					"url":    "POST /generate-video",
+					"url": "POST /generate-video",
 					"body": gin.H{
 						"background_video": "https://example.com/background.mp4",
 						"audio_files": []gin.H{

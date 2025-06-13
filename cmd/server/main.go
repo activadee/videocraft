@@ -50,13 +50,13 @@ func main() {
 	}
 
 	// Initialize logger
-	logger := logger.New(cfg.Log.Level)
+	appLogger := logger.New(cfg.Log.Level)
 
 	// Initialize services
-	services := initializeServices(cfg, logger)
+	services := initializeServices(cfg, appLogger)
 
 	// Setup router
-	router := api.NewRouter(cfg, services, logger)
+	router := api.NewRouter(cfg, services, appLogger)
 
 	// Start server
 	srv := &http.Server{
@@ -67,18 +67,18 @@ func main() {
 	// Start server in goroutine
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server:", err)
+			appLogger.Fatal("Failed to start server:", err)
 		}
 	}()
 
-	logger.Info("Server started on ", cfg.Server.Address())
+	appLogger.Info("Server started on ", cfg.Server.Address())
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logger.Info("Shutting down server...")
+	appLogger.Info("Shutting down server...")
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -90,20 +90,20 @@ func main() {
 	}
 
 	if err := srv.Shutdown(ctx); err != nil {
-		logger.Fatal("Server forced to shutdown:", err)
+		appLogger.Fatal("Server forced to shutdown:", err)
 	}
 
-	logger.Info("Server exited")
+	appLogger.Info("Server exited")
 }
 
-func initializeServices(cfg *config.Config, log logger.Logger) *services.Services {
+func initializeServices(cfg *config.Config, appLogger logger.Logger) *services.Services {
 	// Initialize all services with dependency injection
-	audioSvc := services.NewAudioService(cfg, log)
-	transcriptionSvc := services.NewTranscriptionService(cfg, log)
-	subtitleSvc := services.NewSubtitleService(cfg, log, transcriptionSvc, audioSvc)
-	ffmpegSvc := services.NewFFmpegService(cfg, log, transcriptionSvc, subtitleSvc, audioSvc)
-	storageSvc := services.NewStorageService(cfg, log)
-	jobSvc := services.NewJobService(cfg, log, ffmpegSvc, audioSvc, transcriptionSvc, storageSvc)
+	audioSvc := services.NewAudioService(cfg, appLogger)
+	transcriptionSvc := services.NewTranscriptionService(cfg, appLogger)
+	subtitleSvc := services.NewSubtitleService(cfg, appLogger, transcriptionSvc, audioSvc)
+	ffmpegSvc := services.NewFFmpegService(cfg, appLogger, transcriptionSvc, subtitleSvc, audioSvc)
+	storageSvc := services.NewStorageService(cfg, appLogger)
+	jobSvc := services.NewJobService(cfg, appLogger, ffmpegSvc, audioSvc, transcriptionSvc, storageSvc)
 
 	return &services.Services{
 		FFmpeg:        ffmpegSvc,
@@ -140,7 +140,7 @@ func printHelp() {
 	fmt.Println("CONFIGURATION:")
 	fmt.Println("  Configuration files are searched in:")
 	fmt.Println("  - ./config.yaml")
-	fmt.Println("  - ./config/config.yaml") 
+	fmt.Println("  - ./config/config.yaml")
 	fmt.Println("  - /etc/videocraft/config.yaml")
 	fmt.Println()
 	fmt.Println("For more information, visit: https://github.com/activadee/videocraft")

@@ -38,17 +38,17 @@ type FFmpegConfig struct {
 }
 
 type TranscriptionConfig struct {
-	Enabled    bool           `mapstructure:"enabled"`
-	Daemon     DaemonConfig   `mapstructure:"daemon"`
-	Python     PythonConfig   `mapstructure:"python"`
+	Enabled    bool             `mapstructure:"enabled"`
+	Daemon     DaemonConfig     `mapstructure:"daemon"`
+	Python     PythonConfig     `mapstructure:"python"`
 	Processing ProcessingConfig `mapstructure:"processing"`
 }
 
 type DaemonConfig struct {
-	Enabled             bool          `mapstructure:"enabled"`
-	IdleTimeout         time.Duration `mapstructure:"idle_timeout"`
-	StartupTimeout      time.Duration `mapstructure:"startup_timeout"`
-	RestartMaxAttempts  int           `mapstructure:"restart_max_attempts"`
+	Enabled            bool          `mapstructure:"enabled"`
+	IdleTimeout        time.Duration `mapstructure:"idle_timeout"`
+	StartupTimeout     time.Duration `mapstructure:"startup_timeout"`
+	RestartMaxAttempts int           `mapstructure:"restart_max_attempts"`
 }
 
 type PythonConfig struct {
@@ -65,12 +65,12 @@ type ProcessingConfig struct {
 }
 
 type SubtitlesConfig struct {
-	Enabled    bool         `mapstructure:"enabled"`
-	Style      string       `mapstructure:"style"`
-	FontFamily string       `mapstructure:"font_family"`
-	FontSize   int          `mapstructure:"font_size"`
-	Position   string       `mapstructure:"position"`
-	Colors     ColorConfig  `mapstructure:"colors"`
+	Enabled    bool        `mapstructure:"enabled"`
+	Style      string      `mapstructure:"style"`
+	FontFamily string      `mapstructure:"font_family"`
+	FontSize   int         `mapstructure:"font_size"`
+	Position   string      `mapstructure:"position"`
+	Colors     ColorConfig `mapstructure:"colors"`
 }
 
 type ColorConfig struct {
@@ -119,9 +119,9 @@ func Load() (*Config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("VIDEOCRAFT")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	
+
 	// Manual bindings for complex types
-	viper.BindEnv("security.allowed_domains", "VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS")
+	_ = viper.BindEnv("security.allowed_domains", "VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS")
 
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
@@ -172,7 +172,7 @@ func setDefaults() {
 	viper.SetDefault("transcription.python.device", "auto")
 	viper.SetDefault("transcription.processing.workers", 2)
 	viper.SetDefault("transcription.processing.timeout", "60s")
-	
+
 	// Subtitles defaults
 	viper.SetDefault("subtitles.enabled", true)
 	viper.SetDefault("subtitles.style", "progressive")

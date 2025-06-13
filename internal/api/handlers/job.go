@@ -4,10 +4,16 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/activadee/videocraft/internal/config"
 	"github.com/activadee/videocraft/internal/domain/errors"
 	"github.com/activadee/videocraft/internal/services"
 	"github.com/activadee/videocraft/pkg/logger"
+)
+
+const (
+	jobStatusCompleted = "completed"
+	jobStatusFailed    = "failed"
 )
 
 type JobHandler struct {
@@ -16,10 +22,10 @@ type JobHandler struct {
 	log      logger.Logger
 }
 
-func NewJobHandler(cfg *config.Config, services *services.Services, log logger.Logger) *JobHandler {
+func NewJobHandler(cfg *config.Config, svcContainer *services.Services, log logger.Logger) *JobHandler {
 	return &JobHandler{
 		cfg:      cfg,
-		services: services,
+		services: svcContainer,
 		log:      log,
 	}
 }
@@ -62,13 +68,13 @@ func (h *JobHandler) GetJobStatus(c *gin.Context) {
 		"updated_at": job.UpdatedAt,
 	}
 
-	if job.Status == "completed" {
+	if job.Status == jobStatusCompleted {
 		response["video_id"] = job.VideoID
 		response["download_url"] = "/download/" + job.VideoID
 		response["completed_at"] = job.CompletedAt
 	}
 
-	if job.Status == "failed" {
+	if job.Status == jobStatusFailed {
 		response["error"] = job.Error
 	}
 
@@ -97,13 +103,13 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 			"updated_at": job.UpdatedAt,
 		}
 
-		if job.Status == "completed" {
+		if job.Status == jobStatusCompleted {
 			jobResponse["video_id"] = job.VideoID
 			jobResponse["download_url"] = "/download/" + job.VideoID
 			jobResponse["completed_at"] = job.CompletedAt
 		}
 
-		if job.Status == "failed" {
+		if job.Status == jobStatusFailed {
 			jobResponse["error"] = job.Error
 		}
 
@@ -131,9 +137,10 @@ func (h *JobHandler) CancelJob(c *gin.Context) {
 	if err != nil {
 		if vpe, ok := err.(*errors.VideoProcessingError); ok {
 			status := http.StatusInternalServerError
-			if vpe.Code == errors.ErrCodeJobNotFound {
+			switch vpe.Code {
+			case errors.ErrCodeJobNotFound:
 				status = http.StatusNotFound
-			} else if vpe.Code == errors.ErrCodeInvalidInput {
+			case errors.ErrCodeInvalidInput:
 				status = http.StatusBadRequest
 			}
 			c.JSON(status, gin.H{
@@ -195,13 +202,13 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 		"updated_at": job.UpdatedAt,
 	}
 
-	if job.Status == "completed" {
+	if job.Status == jobStatusCompleted {
 		response["video_id"] = job.VideoID
 		response["download_url"] = "/download/" + job.VideoID
 		response["completed_at"] = job.CompletedAt
 	}
 
-	if job.Status == "failed" {
+	if job.Status == jobStatusFailed {
 		response["error"] = job.Error
 	}
 
