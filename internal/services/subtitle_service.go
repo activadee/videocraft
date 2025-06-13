@@ -288,7 +288,7 @@ func (ss *subtitleService) createASSFile(events []subtitle.SubtitleEvent) (strin
 	assContent := generator.GenerateASS(events)
 
 	// Write to file
-	if err := os.WriteFile(filePath, []byte(assContent), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(assContent), 0600); err != nil {
 		return "", fmt.Errorf("failed to write ASS file: %w", err)
 	}
 
@@ -329,7 +329,7 @@ func (ss *subtitleService) isValidHexColor(color string) bool {
 	}
 
 	for _, c := range color[1:] {
-		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
+		if (c < '0' || c > '9') && (c < 'A' || c > 'F') && (c < 'a' || c > 'f') {
 			return false
 		}
 	}

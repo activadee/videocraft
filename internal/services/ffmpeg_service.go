@@ -293,7 +293,7 @@ func (s *ffmpegService) collectAudioElements(project models.VideoProject) []mode
 	// Collect from scenes in order
 	for _, scene := range project.Scenes {
 		for _, element := range scene.Elements {
-			if element.Type == "audio" {
+			if element.Type == elementTypeAudio {
 				audioElements = append(audioElements, element)
 			}
 		}

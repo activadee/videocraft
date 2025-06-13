@@ -133,8 +133,8 @@ func (s *audioService) DownloadAudio(ctx context.Context, url string) (string, e
 	tempFile := filepath.Join(s.cfg.Storage.TempDir, fmt.Sprintf("audio_%s%s", uuid.New().String()[:8], ext))
 
 	// Ensure temp directory exists
-	if err := os.MkdirAll(s.cfg.Storage.TempDir, 0755); err != nil {
-		return "", errors.StorageFailed(err)
+	if mkdirErr := os.MkdirAll(s.cfg.Storage.TempDir, 0755); mkdirErr != nil {
+		return "", errors.StorageFailed(mkdirErr)
 	}
 
 	// Create output file
@@ -248,7 +248,7 @@ func (s *audioService) parseAudioInfo(jsonOutput, filePath string) (*AudioInfo, 
 	// Get audio stream info
 	var format string
 	for _, stream := range probe.Streams {
-		if stream.CodecType == "audio" {
+		if stream.CodecType == elementTypeAudio {
 			format = stream.CodecName
 			break
 		}

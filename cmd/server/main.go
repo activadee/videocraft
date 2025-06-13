@@ -60,8 +60,11 @@ func main() {
 
 	// Start server
 	srv := &http.Server{
-		Addr:    cfg.Server.Address(),
-		Handler: router,
+		Addr:         cfg.Server.Address(),
+		Handler:      router,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	// Start server in goroutine

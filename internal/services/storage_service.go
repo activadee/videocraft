@@ -90,7 +90,7 @@ func (s *storageService) GetVideo(videoID string) (string, error) {
 	pattern := filepath.Join(s.cfg.Storage.OutputDir, sanitizedID+".*")
 
 	// Additional security check: ensure pattern is within output directory
-	if err := s.validatePathWithinBounds(pattern, s.cfg.Storage.OutputDir); err != nil {
+	if validateErr := s.validatePathWithinBounds(pattern, s.cfg.Storage.OutputDir); validateErr != nil {
 		s.logSecurityViolation("Path outside allowed directory", map[string]interface{}{
 			"pattern":    pattern,
 			"output_dir": s.cfg.Storage.OutputDir,
@@ -109,7 +109,7 @@ func (s *storageService) GetVideo(videoID string) (string, error) {
 
 	// Security check: verify all matches are within allowed directory
 	for _, match := range matches {
-		if err := s.validatePathWithinBounds(match, s.cfg.Storage.OutputDir); err != nil {
+		if matchErr := s.validatePathWithinBounds(match, s.cfg.Storage.OutputDir); matchErr != nil {
 			s.logSecurityViolation("Match outside allowed directory", map[string]interface{}{
 				"match":      match,
 				"output_dir": s.cfg.Storage.OutputDir,
@@ -122,7 +122,7 @@ func (s *storageService) GetVideo(videoID string) (string, error) {
 	videoPath := matches[0]
 
 	// Final security check on result path
-	if err := s.validatePathWithinBounds(videoPath, s.cfg.Storage.OutputDir); err != nil {
+	if finalErr := s.validatePathWithinBounds(videoPath, s.cfg.Storage.OutputDir); finalErr != nil {
 		s.logSecurityViolation("Result path outside allowed directory", map[string]interface{}{
 			"video_path": videoPath,
 			"output_dir": s.cfg.Storage.OutputDir,
