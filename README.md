@@ -222,12 +222,12 @@ graph TB
     B --> F[Docker Tests]
     G[Security Scan]
     
-    A -.-> H[Go 1.24.4 + golangci-lint v2.1.6]
-    B -.-> I[Unit Tests + Coverage]
-    C -.-> J[Real Dependencies]
-    E -.-> K[Performance Testing]
-    F -.-> L[Container Validation]
-    G -.-> M[gosec + govulncheck]
+    A -.-> H["Go 1.24.4 + golangci-lint v2.1.6<br/>10min timeout"]
+    B -.-> I["Unit Tests + Coverage<br/>30min timeout"]
+    C -.-> J["Real Dependencies<br/>20min timeout"]
+    E -.-> K["Performance Testing<br/>15min timeout"]
+    F -.-> L["Container Validation<br/>10min timeout"]
+    G -.-> M["gosec + govulncheck<br/>15min timeout"]
 ```
 
 ### Performance Improvements
