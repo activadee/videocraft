@@ -61,7 +61,7 @@ pip install -r scripts/requirements.txt
 
 # Build and run
 make build
-./bin/videocraft-server
+./videocraft
 ```
 
 The server will start on `http://localhost:8080`
@@ -347,7 +347,7 @@ services:
 ```
 
 ### Kubernetes
-See `deployments/k8s/` for complete Kubernetes manifests including:
+Kubernetes deployment manifests can be created based on the Docker configuration including:
 - Deployment with resource limits
 - Service and Ingress configuration  
 - ConfigMap for environment variables
@@ -409,7 +409,7 @@ VideoCraft includes an AI-powered documentation review system using Claude AI to
 2. Or install the Claude GitHub app (for OAuth integration)
 3. The workflow automatically triggers on documentation or code changes
 
-See [Claude Integration Guide](.github/CLAUDE_INTEGRATION.md) for detailed setup instructions.
+See the GitHub Actions workflow configuration in `.github/workflows/documentation-review-oauth.yml` for setup details.
 
 ## Contributing
 
