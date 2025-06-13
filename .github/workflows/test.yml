@@ -6,37 +6,52 @@ on:
   pull_request:
     branches: [main, develop]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+# Cancel in-progress runs for pull requests
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
-    services:
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.24
+          go-version: "1.24.4"
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          version: v1.62.0
+          args: --timeout=5m
 
-      - name: Install dependencies
-        run: go mod download
+      - name: Run go vet
+        run: go vet ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.4"
+          cache: true
 
       - name: Verify dependencies
         run: go mod verify
@@ -51,65 +66,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Run go vet
-        run: go vet ./...
-
-      - name: Run staticcheck
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          staticcheck ./...
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.59.1
-          args: --timeout=5m
-
       - name: Create test directories
-        run: |
-          mkdir -p generated_videos
-          mkdir -p temp
-          mkdir -p whisper_cache
+        run: make dev-setup
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         run: |
-          go test -v -race -coverprofile=coverage.out ./...
-
-      - name: Run integration tests
-        run: |
-          go test -v -tags=integration ./...
-        env:
-          VIDEOCRAFT_LOG_LEVEL: debug
-          VIDEOCRAFT_STORAGE_OUTPUT_DIR: ./generated_videos
-          VIDEOCRAFT_STORAGE_TEMP_DIR: ./temp
+          go test -v -race -coverprofile=coverage.out -json ./... > test-results.json
 
       - name: Generate coverage report
         run: |
           go tool cover -html=coverage.out -o coverage.html
           go tool cover -func=coverage.out
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.out
-          flags: unittests
-          name: codecov-umbrella
-
-      - name: Upload coverage reports
+      - name: Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: coverage-reports
+          name: test-results
           path: |
+            test-results.json
             coverage.out
             coverage.html
+          retention-days: 30
 
-      - name: Check for security vulnerabilities
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
-
-  benchmark:
+  integration:
+    name: Integration Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: test
 
     steps:
@@ -117,12 +100,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.24
-
-      - name: Install dependencies
-        run: go mod download
+          go-version: "1.24.4"
+          cache: true
 
       - name: Install Python dependencies
         run: |
@@ -135,23 +116,99 @@ jobs:
           sudo apt-get install -y ffmpeg
 
       - name: Create test directories
+        run: make dev-setup
+
+      - name: Run integration tests
+        run: go test -v -tags=integration ./...
+        env:
+          VIDEOCRAFT_LOG_LEVEL: debug
+          VIDEOCRAFT_STORAGE_OUTPUT_DIR: ./generated_videos
+          VIDEOCRAFT_STORAGE_TEMP_DIR: ./temp
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.4"
+          cache: true
+
+      - name: Run security checks
+        run: make security
+
+  coverage:
+    name: Coverage Upload
+    runs-on: ubuntu-latest
+    needs: test
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.out
+          flags: unittests
+          verbose: true
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.4"
+          cache: true
+
+      - name: Install Python dependencies
         run: |
-          mkdir -p generated_videos
-          mkdir -p temp
+          python3 -m pip install --upgrade pip
+          pip3 install -r scripts/requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Create test directories
+        run: make dev-setup
 
       - name: Run benchmarks
-        run: |
-          go test -bench=. -benchmem -run=^$ ./... | tee benchmark.txt
+        run: make benchmark | tee benchmark.txt
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
           path: benchmark.txt
+          retention-days: 7
 
-  docker-test:
+  docker:
+    name: Docker Test
     runs-on: ubuntu-latest
     needs: test
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -161,12 +218,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        run: |
-          docker build -t videocraft:test .
+        run: docker build -t videocraft:test .
 
       - name: Test Docker image
-        run: |
-          docker run --rm videocraft:test --version
+        run: docker run --rm videocraft:test --version
 
       - name: Test Docker Compose
         run: |
