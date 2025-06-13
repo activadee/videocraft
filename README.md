@@ -34,7 +34,7 @@ VideoCraft is a high-performance Go-based video generation platform that creates
 ## Quick Start
 
 ### Prerequisites
-- Go 1.24+ 
+- Go 1.24+ (tested with Go 1.24.4)
 - FFmpeg
 - Python 3.8+ (for Whisper daemon)
 - Docker (optional)
@@ -202,10 +202,10 @@ Unlike simple concatenation approaches, VideoCraft uses **real audio file durati
 
 ## CI/CD Pipeline
 
-VideoCraft uses a modern GitHub Actions workflow with 2025 best practices:
+VideoCraft uses a modern GitHub Actions workflow with 2025 best practices and parallel job execution for fast feedback:
 
 ### Pipeline Features
-- **Parallel Job Execution**: 7 concurrent jobs for fast feedback (lint, test, integration, security, coverage, benchmark, docker)
+- **Parallel Job Execution**: 7 concurrent jobs for optimal performance
 - **Latest Tooling**: Go 1.24.4, golangci-lint v2.1.6, codecov-action v5
 - **Built-in Caching**: Automatic dependency caching with setup-go@v5
 - **Security Focus**: Comprehensive security scanning with gosec and govulncheck
@@ -214,16 +214,27 @@ VideoCraft uses a modern GitHub Actions workflow with 2025 best practices:
 
 ### Pipeline Jobs
 ```mermaid
-graph LR
-    A[Lint] --> D[Coverage]
-    B[Test] --> D
-    B --> C[Integration]
-    B --> E[Benchmark]
-    B --> F[Docker]
-    G[Security] 
+graph TB
+    A[Lint Job] --> D[Coverage Upload]
+    B[Test Job] --> D
+    B --> C[Integration Tests]
+    B --> E[Benchmark Tests]
+    B --> F[Docker Tests]
+    G[Security Scan]
+    
+    A -.-> H[Go 1.24.4 + golangci-lint v2.1.6]
+    B -.-> I[Unit Tests + Coverage]
+    C -.-> J[Real Dependencies]
+    E -.-> K[Performance Testing]
+    F -.-> L[Container Validation]
+    G -.-> M[gosec + govulncheck]
 ```
 
-The pipeline reduces CI time by ~50% through parallel execution and optimized caching.
+### Performance Improvements
+- **~50% faster CI time** through parallel execution
+- **Built-in Go module caching** reduces dependency installation
+- **Optimized job dependencies** prevent unnecessary waiting
+- **Concurrent security validation** (1000 URLs validated in <20ms)
 
 ## Development
 
@@ -241,7 +252,7 @@ videocraft/
 └── deployments/           # Docker and K8s configs
 ```
 
-### Building
+### Building & Testing
 ```bash
 # Development build
 make build
@@ -252,11 +263,17 @@ make build-prod
 # Run tests (matches CI test job)
 make test
 
-# Run linting (matches CI lint job)  
+# Run linting (matches CI lint job with golangci-lint v2.1.6)
 make lint
 
-# Run security scans (matches CI security job)
+# Run security scans (matches CI security job - gosec + govulncheck)
 make security
+
+# Run benchmarks (matches CI benchmark job)
+make benchmark
+
+# Run integration tests (matches CI integration job)
+make integration
 
 # Run all quality checks (comprehensive validation)
 make quality-check

@@ -964,17 +964,25 @@ make quality-check
 ```
 
 #### CI/CD Pipeline Structure
-The GitHub Actions workflow runs parallel jobs for optimal performance:
+The GitHub Actions workflow runs parallel jobs for optimal performance with 2025 best practices:
 
-- **Lint Job**: golangci-lint v2.1.6 + go vet
-- **Test Job**: Unit tests with coverage reporting
-- **Integration Job**: Integration tests with real dependencies
-- **Security Job**: Security scans (gosec, govulncheck)
-- **Coverage Job**: Codecov upload
-- **Benchmark Job**: Performance benchmarks
-- **Docker Job**: Container build and test
+**Job Architecture:**
+- **Lint Job**: golangci-lint v2.1.6 + go vet (10min timeout)
+- **Test Job**: Unit tests with coverage reporting (30min timeout)
+- **Integration Job**: Integration tests with real dependencies (20min timeout, depends on test)
+- **Security Job**: Security scans (gosec, govulncheck) (15min timeout)
+- **Coverage Job**: Codecov upload (depends on test)
+- **Benchmark Job**: Performance benchmarks (15min timeout, depends on test)
+- **Docker Job**: Container build and test (10min timeout, depends on test)
 
-All jobs use Go 1.24.4 with built-in caching for faster execution.
+**Key Features:**
+- **Go 1.24.4** with built-in caching via setup-go@v5
+- **Parallel execution** reduces CI time by ~50%
+- **Concurrency control** cancels previous runs on PR updates
+- **Structured output** with JSON test results and coverage reports
+- **Artifact management** with retention policies (7-30 days)
+
+All jobs use proper permissions (`contents: read`) and timeout limits for security.
 
 ---
 
