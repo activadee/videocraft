@@ -345,11 +345,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
 
-      - name: Configure Git (as GitHub App)
-        run: |
-          git config --local user.email "docs-bot[bot]@users.noreply.github.com"
-          git config --local user.name "docs-bot[bot]"
-
       - name: Critical Documentation Sync
         uses: grll/claude-code-action@v0.0.13
         with:
