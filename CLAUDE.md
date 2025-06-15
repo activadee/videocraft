@@ -91,6 +91,8 @@ graph TB
 
 **Middleware**: Cross-cutting concerns
 - `auth.go`: Bearer token authentication
+- `cors.go`: Secure CORS configuration with domain allowlisting
+- `csrf.go`: CSRF protection with token validation
 - `logger.go`: Request/response logging with correlation IDs
 - `error.go`: Centralized error handling and formatting
 - `ratelimit.go`: Rate limiting protection
@@ -187,6 +189,51 @@ graph TB
     Protocol -.blocks.-> ProtInj
     Domain -.blocks.-> SSRF
 ```
+
+### HTTP Security Layer
+
+VideoCraft implements comprehensive HTTP-level security through specialized middleware components:
+
+#### CORS Security (`internal/api/middleware/cors.go`)
+
+**Key Features:**
+- **Zero Wildcard Policy**: Completely eliminates `AllowOrigins: ["*"]` vulnerability
+- **Strict Domain Allowlisting**: Only explicitly configured domains permitted
+- **Origin Validation Caching**: Thread-safe performance optimization
+- **Suspicious Pattern Detection**: Blocks malicious origin patterns
+- **Comprehensive Security Logging**: Structured audit trail
+
+**Configuration:**
+```go
+// Environment variable
+VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="trusted.example.com,api.trusted.org"
+
+// YAML configuration
+security:
+  allowed_domains:
+    - "trusted.example.com"
+    - "api.trusted.org"
+```
+
+#### CSRF Protection (`internal/api/middleware/csrf.go`)
+
+**Key Features:**
+- **Token-Based Validation**: Cryptographically secure CSRF tokens
+- **State-Change Protection**: POST, PUT, DELETE, PATCH requests require tokens
+- **Enhanced Token Validation**: Format validation prevents injection attacks
+- **Origin Correlation**: Cross-reference with CORS-allowed domains
+- **Safe Method Exemption**: GET, HEAD, OPTIONS bypass CSRF checks
+
+**Usage:**
+```bash
+# Get CSRF token
+curl http://localhost:3002/api/v1/csrf-token
+
+# Include token in request
+curl -X POST -H "X-CSRF-Token: your-token" http://localhost:3002/api/v1/generate-video
+```
+
+For detailed HTTP security implementation, see: [`internal/api/middleware/SECURITY.md`](internal/api/middleware/SECURITY.md)
 
 ### FFmpeg Command Injection Prevention
 
@@ -655,6 +702,15 @@ type Config struct {
         TempDir   string `mapstructure:"temp_dir"`
         MaxAge    int    `mapstructure:"max_age"`
     } `mapstructure:"storage"`
+    
+    Security struct {
+        APIKey         string   `mapstructure:"api_key"`
+        RateLimit      int      `mapstructure:"rate_limit"`
+        EnableAuth     bool     `mapstructure:"enable_auth"`
+        AllowedDomains []string `mapstructure:"allowed_domains"`
+        EnableCSRF     bool     `mapstructure:"enable_csrf"`
+        CSRFSecret     string   `mapstructure:"csrf_secret"`
+    } `mapstructure:"security"`
 }
 ```
 
