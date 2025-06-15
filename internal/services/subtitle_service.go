@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -90,8 +91,11 @@ func (ss *subtitleService) GenerateSubtitles(ctx context.Context, project models
 		return nil, nil
 	}
 
-	// Create ASS file
-	filePath, err := ss.createASSFile(events)
+	// Extract subtitle settings from project
+	subtitleSettings := ss.extractSubtitleSettings(project)
+	
+	// Create ASS file with settings
+	filePath, err := ss.createASSFileWithSettings(events, subtitleSettings)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ASS file: %w", err)
 	}
@@ -261,39 +265,12 @@ func (ss *subtitleService) getAudioDuration(ctx context.Context, audioURL string
 	return ss.audio.AnalyzeAudio(ctx, audioURL)
 }
 
+// createASSFile provides backward compatibility by using global config only
+// Deprecated: This method is maintained for backward compatibility but doesn't support JSON settings
+// Use createASSFileWithSettings for new implementations that need JSON SubtitleSettings support
 func (ss *subtitleService) createASSFile(events []subtitle.SubtitleEvent) (string, error) {
-	// Ensure temp directory exists
-	if err := os.MkdirAll(ss.cfg.Storage.TempDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %w", err)
-	}
-
-	// Generate unique filename
-	filename := fmt.Sprintf("subtitles_%s.ass", uuid.New().String()[:8])
-	filePath := filepath.Join(ss.cfg.Storage.TempDir, filename)
-
-	// Create ASS generator with configuration
-	assConfig := subtitle.ASSConfig{
-		FontFamily:   ss.cfg.Subtitles.FontFamily,
-		FontSize:     ss.cfg.Subtitles.FontSize,
-		Position:     ss.cfg.Subtitles.Position,
-		WordColor:    ss.cfg.Subtitles.Colors.Word,
-		OutlineColor: ss.cfg.Subtitles.Colors.Outline,
-		OutlineWidth: 2, // Default outline width
-		ShadowOffset: 1, // Default shadow offset
-	}
-
-	generator := subtitle.NewASSGenerator(assConfig)
-
-	// Generate ASS content
-	assContent := generator.GenerateASS(events)
-
-	// Write to file
-	if err := os.WriteFile(filePath, []byte(assContent), 0600); err != nil {
-		return "", fmt.Errorf("failed to write ASS file: %w", err)
-	}
-
-	ss.log.Debugf("ASS file created: %s", filePath)
-	return filePath, nil
+	// For backward compatibility, delegate to new method with empty settings (uses global config)
+	return ss.createASSFileWithSettings(events, models.SubtitleSettings{})
 }
 
 func (ss *subtitleService) ValidateSubtitleConfig(project models.VideoProject) error {
@@ -348,5 +325,233 @@ func (ss *subtitleService) CleanupTempFiles(filePath string) error {
 	}
 
 	ss.log.Debugf("Cleaned up subtitle file: %s", filePath)
+	return nil
+}
+
+// extractSubtitleSettings extracts SubtitleSettings from a VideoProject
+// Looks for subtitle elements in both global elements and scene elements
+// Returns empty SubtitleSettings if no subtitle element is found
+func (ss *subtitleService) extractSubtitleSettings(project models.VideoProject) models.SubtitleSettings {
+	// Look for subtitle element in project
+	for _, element := range project.Elements {
+		if element.Type == "subtitles" {
+			return element.Settings
+		}
+	}
+	
+	// Check scenes for subtitle elements
+	for _, scene := range project.Scenes {
+		for _, element := range scene.Elements {
+			if element.Type == "subtitles" {
+				return element.Settings
+			}
+		}
+	}
+	
+	// Return empty settings if no subtitle element found
+	return models.SubtitleSettings{}
+}
+
+// createASSFileWithSettings creates ASS file using provided SubtitleSettings
+// This method replaces the original createASSFile to support JSON subtitle configuration
+// The provided settings are merged with global config before ASS generation
+func (ss *subtitleService) createASSFileWithSettings(events []subtitle.SubtitleEvent, settings models.SubtitleSettings) (string, error) {
+	// Ensure temp directory exists
+	if err := os.MkdirAll(ss.cfg.Storage.TempDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create temp directory: %w", err)
+	}
+
+	// Generate unique filename
+	filename := fmt.Sprintf("subtitles_%s.ass", uuid.New().String()[:8])
+	filePath := filepath.Join(ss.cfg.Storage.TempDir, filename)
+
+	// Merge JSON settings with global config to create ASS config
+	assConfig, err := ss.mergeSettingsWithGlobalConfig(settings)
+	if err != nil {
+		return "", fmt.Errorf("failed to merge settings: %w", err)
+	}
+
+	// Create ASS generator with merged configuration
+	generator := subtitle.NewASSGenerator(assConfig)
+
+	// Generate ASS content
+	assContent := generator.GenerateASS(events)
+
+	// Write to file
+	if err := os.WriteFile(filePath, []byte(assContent), 0600); err != nil {
+		return "", fmt.Errorf("failed to write ASS file: %w", err)
+	}
+
+	ss.log.Debugf("ASS file created with custom settings: %s", filePath)
+	return filePath, nil
+}
+
+// mergeSettingsWithGlobalConfig merges JSON SubtitleSettings with global config
+// JSON settings take precedence over global config, with global config as fallback
+func (ss *subtitleService) mergeSettingsWithGlobalConfig(jsonSettings models.SubtitleSettings) (subtitle.ASSConfig, error) {
+	// Check for nil configuration
+	if ss.cfg == nil {
+		return subtitle.ASSConfig{}, fmt.Errorf("subtitle service configuration is nil")
+	}
+	
+	// Start with global config as base, providing sensible defaults
+	config := subtitle.ASSConfig{
+		FontFamily:   ss.cfg.Subtitles.FontFamily,
+		FontSize:     ss.cfg.Subtitles.FontSize,
+		Position:     ss.cfg.Subtitles.Position,
+		WordColor:    ss.cfg.Subtitles.Colors.Word,
+		OutlineColor: ss.cfg.Subtitles.Colors.Outline,
+		OutlineWidth: 2, // Default outline width
+		ShadowOffset: 1, // Default shadow offset
+		Style:        ss.cfg.Subtitles.Style,
+		LineColor:    ss.cfg.Subtitles.Colors.Word, // Default line color same as word color
+		ShadowColor:  "#808080",                     // Default gray shadow
+		BoxColor:     "#000000",                     // Default black background
+	}
+
+	// Use helper function to override with JSON settings where provided
+	config = ss.applyJSONSettingsOverrides(config, jsonSettings)
+	
+	// Fix LineColor: if not explicitly set in JSON, use the final WordColor (after JSON override)
+	if jsonSettings.LineColor == "" {
+		config.LineColor = config.WordColor
+	}
+	
+	// Validate merged configuration
+	if err := ss.validateMergedConfig(config); err != nil {
+		return config, fmt.Errorf("invalid merged subtitle configuration: %w", err)
+	}
+
+	ss.log.Debugf("Merged subtitle settings: JSON overrides applied to global config")
+	return config, nil
+}
+
+// applyJSONSettingsOverrides applies non-empty JSON settings to the base config
+func (ss *subtitleService) applyJSONSettingsOverrides(baseConfig subtitle.ASSConfig, jsonSettings models.SubtitleSettings) subtitle.ASSConfig {
+	config := baseConfig
+
+	// String fields: override if non-empty
+	if jsonSettings.FontFamily != "" {
+		config.FontFamily = jsonSettings.FontFamily
+	}
+	if jsonSettings.Position != "" {
+		config.Position = jsonSettings.Position
+	}
+	if jsonSettings.WordColor != "" {
+		config.WordColor = jsonSettings.WordColor
+	}
+	if jsonSettings.OutlineColor != "" {
+		config.OutlineColor = jsonSettings.OutlineColor
+	}
+	if jsonSettings.Style != "" {
+		config.Style = jsonSettings.Style
+	}
+	if jsonSettings.LineColor != "" {
+		config.LineColor = jsonSettings.LineColor
+	}
+	if jsonSettings.ShadowColor != "" {
+		config.ShadowColor = jsonSettings.ShadowColor
+	}
+	if jsonSettings.BoxColor != "" {
+		config.BoxColor = jsonSettings.BoxColor
+	}
+
+	// Integer fields: override if non-zero
+	if jsonSettings.FontSize != 0 {
+		config.FontSize = jsonSettings.FontSize
+	}
+	if jsonSettings.OutlineWidth != 0 {
+		config.OutlineWidth = jsonSettings.OutlineWidth
+	}
+	if jsonSettings.ShadowOffset != 0 {
+		config.ShadowOffset = jsonSettings.ShadowOffset
+	}
+
+	return config
+}
+
+// validateMergedConfig validates the final merged configuration
+func (ss *subtitleService) validateMergedConfig(config subtitle.ASSConfig) error {
+	// Validate font size
+	if config.FontSize < 6 || config.FontSize > 300 {
+		return errors.InvalidInput("merged font size must be between 6 and 300")
+	}
+
+	// Validate outline width
+	if config.OutlineWidth < 0 || config.OutlineWidth > 20 {
+		return errors.InvalidInput("outline width must be between 0 and 20")
+	}
+
+	// Validate shadow offset  
+	if config.ShadowOffset < 0 || config.ShadowOffset > 20 {
+		return errors.InvalidInput("shadow offset must be between 0 and 20")
+	}
+
+	// Validate colors if they look like hex colors
+	colorFields := map[string]string{
+		"word_color":    config.WordColor,
+		"outline_color": config.OutlineColor,
+		"line_color":    config.LineColor,
+		"shadow_color":  config.ShadowColor,
+		"box_color":     config.BoxColor,
+	}
+
+	for fieldName, color := range colorFields {
+		if color != "" && strings.HasPrefix(color, "#") && !ss.isValidHexColor(color) {
+			return errors.InvalidInput(fmt.Sprintf("invalid %s format: %s", fieldName, color))
+		}
+	}
+
+	return nil
+}
+
+// ValidateJSONSubtitleSettings validates SubtitleSettings from JSON
+func (ss *subtitleService) ValidateJSONSubtitleSettings(project models.VideoProject) error {
+	settings := ss.extractSubtitleSettings(project)
+	
+	// If no subtitle settings found, validation passes
+	if settings == (models.SubtitleSettings{}) {
+		return nil
+	}
+	
+	// Validate font size
+	if settings.FontSize != 0 && (settings.FontSize < 10 || settings.FontSize > 200) {
+		return errors.InvalidInput("font size must be between 10 and 200")
+	}
+	
+	// Validate colors (if provided)
+	if settings.WordColor != "" && !ss.isValidHexColor(settings.WordColor) {
+		return errors.InvalidInput("invalid word color format")
+	}
+	if settings.OutlineColor != "" && !ss.isValidHexColor(settings.OutlineColor) {
+		return errors.InvalidInput("invalid outline color format")
+	}
+	if settings.LineColor != "" && !ss.isValidHexColor(settings.LineColor) {
+		return errors.InvalidInput("invalid line color format")
+	}
+	if settings.ShadowColor != "" && !ss.isValidHexColor(settings.ShadowColor) {
+		return errors.InvalidInput("invalid shadow color format")
+	}
+	if settings.BoxColor != "" && !ss.isValidHexColor(settings.BoxColor) {
+		return errors.InvalidInput("invalid box color format")
+	}
+	
+	// Validate position (if provided)
+	if settings.Position != "" {
+		validPositions := map[string]bool{
+			"left-bottom": true, "center-bottom": true, "right-bottom": true,
+			"left-center": true, "center-center": true, "right-center": true,
+			"left-top": true, "center-top": true, "right-top": true,
+		}
+		if !validPositions[settings.Position] {
+			return errors.InvalidInput("invalid position")
+		}
+	}
+	
+	// Validate style (if provided)
+	if settings.Style != "" && settings.Style != "progressive" && settings.Style != "classic" {
+		return errors.InvalidInput("subtitle style must be 'progressive' or 'classic'")
+	}
+	
 	return nil
 }
