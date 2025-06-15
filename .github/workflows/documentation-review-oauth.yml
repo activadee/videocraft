@@ -117,11 +117,14 @@ jobs:
           echo "$CHANGED_FILES" > /tmp/changed_files.txt
 
           # Check if this is a critical change
-          COMMIT_MESSAGES=$(git log main..HEAD --pretty=format:"%s %b")
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_BODY="${{ github.event.pull_request.body }}"
+          COMMIT_MESSAGES=$(git log main..HEAD --pretty=format:"%s %b" 2>/dev/null || echo "")
+          PR_TITLE="${{ github.event.pull_request.title || '' }}"
+          PR_BODY="${{ github.event.pull_request.body || '' }}"
           
-          if echo "$COMMIT_MESSAGES $PR_TITLE $PR_BODY" | grep -iE "(security|api|breaking|critical)" > /dev/null; then
+          # Safely check for critical keywords
+          if echo "$COMMIT_MESSAGES" | grep -qiE "(security|api|breaking|critical)" || \
+             echo "$PR_TITLE" | grep -qiE "(security|api|breaking|critical)" || \
+             echo "$PR_BODY" | grep -qiE "(security|api|breaking|critical)"; then
             echo "critical_change=true" >> $GITHUB_OUTPUT
             echo "🚨 Critical change detected"
           else
