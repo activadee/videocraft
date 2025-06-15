@@ -29,7 +29,7 @@ func NewRouter(cfg *config.Config, services *services.Services, log logger.Logge
 	jobHandler := handlers.NewJobHandler(cfg, services, log)
 
 	// Setup routes
-	setupRoutes(router, cfg, healthHandler, videoHandler, jobHandler)
+	setupRoutes(router, cfg, log, healthHandler, videoHandler, jobHandler)
 
 	return router
 }
@@ -64,6 +64,7 @@ func setupMiddleware(router *gin.Engine, cfg *config.Config, log logger.Logger) 
 func setupRoutes(
 	router *gin.Engine,
 	cfg *config.Config,
+	log logger.Logger,
 	healthHandler *handlers.HealthHandler,
 	videoHandler *handlers.VideoHandler,
 	jobHandler *handlers.JobHandler,
@@ -79,7 +80,7 @@ func setupRoutes(
 	v1 := router.Group("/api/v1")
 	
 	// CSRF token endpoint (no auth required for getting token)
-	v1.GET("/csrf-token", middleware.CSRFTokenEndpoint(cfg))
+	v1.GET("/csrf-token", middleware.CSRFTokenEndpoint(cfg, log))
 	
 	// Video generation
 	v1.POST("/generate-video", videoHandler.GenerateVideo)
