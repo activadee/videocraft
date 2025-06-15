@@ -1,9 +1,6 @@
 package api
 
 import (
-	"time"
-
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/activadee/videocraft/internal/api/handlers"
@@ -32,7 +29,7 @@ func NewRouter(cfg *config.Config, services *services.Services, log logger.Logge
 	jobHandler := handlers.NewJobHandler(cfg, services, log)
 
 	// Setup routes
-	setupRoutes(router, healthHandler, videoHandler, jobHandler)
+	setupRoutes(router, cfg, healthHandler, videoHandler, jobHandler)
 
 	return router
 }
@@ -44,15 +41,11 @@ func setupMiddleware(router *gin.Engine, cfg *config.Config, log logger.Logger) 
 	// Custom logging middleware
 	router.Use(middleware.Logger(log))
 
-	// CORS middleware
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, // Configure appropriately for production
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	// Secure CORS middleware - NO WILDCARDS
+	router.Use(middleware.SecureCORS(cfg, log))
+
+	// CSRF protection middleware
+	router.Use(middleware.CSRFProtection(cfg, log))
 
 	// Error handling middleware
 	router.Use(middleware.ErrorHandler(log))
@@ -70,6 +63,7 @@ func setupMiddleware(router *gin.Engine, cfg *config.Config, log logger.Logger) 
 
 func setupRoutes(
 	router *gin.Engine,
+	cfg *config.Config,
 	healthHandler *handlers.HealthHandler,
 	videoHandler *handlers.VideoHandler,
 	jobHandler *handlers.JobHandler,
@@ -83,6 +77,10 @@ func setupRoutes(
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
+	
+	// CSRF token endpoint (no auth required for getting token)
+	v1.GET("/csrf-token", middleware.CSRFTokenEndpoint(cfg))
+	
 	// Video generation
 	v1.POST("/generate-video", videoHandler.GenerateVideo)
 
