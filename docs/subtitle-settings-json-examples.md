@@ -107,7 +107,7 @@ As of v2.1, VideoCraft supports per-request subtitle customization through the `
 {
   "elements": [
     {
-      "type": "subtitles", 
+      "type": "subtitles",
       "settings": {
         "font-family": "Calibri",
         "font-size": 28,
@@ -220,7 +220,7 @@ As of v2.1, VideoCraft supports per-request subtitle customization through the `
 - **Performance**: Higher processing requirements
 - **JSON Configuration**: `"style": "progressive"`
 
-### Classic Style  
+### Classic Style
 - **Word or sentence-level**: Traditional subtitle display
 - **Best for**: Movies, general content, faster processing
 - **Performance**: Lower processing requirements
@@ -238,7 +238,7 @@ All color fields accept hex color format:
 ```json
 {
   "word-color": "#FFFFFF",    // White
-  "outline-color": "#000000", // Black  
+  "outline-color": "#000000", // Black
   "shadow-color": "#808080",  // Gray
   "box-color": "#000080"      // Navy blue
 }
@@ -271,7 +271,7 @@ subtitles:
       "settings": {
         "font-family": "Custom Font",
         "font-size": 30
-        // word-color, outline-color, position will use global config
+        // Note: word-color, outline-color, position will use global config
       }
     }
   ]
@@ -286,12 +286,12 @@ The system validates JSON SubtitleSettings and will reject invalid configuration
 - **Range**: 6-300 pixels
 - **Invalid**: Values outside this range will cause validation errors
 
-### Outline Width  
+### Outline Width
 - **Range**: 0-20 pixels
 - **Invalid**: Negative values or values > 20
 
 ### Shadow Offset
-- **Range**: 0-20 pixels  
+- **Range**: 0-20 pixels
 - **Invalid**: Negative values or values > 20
 
 ### Colors
@@ -446,7 +446,7 @@ subtitles:
 - **Higher CPU usage**: Character-by-character rendering
 - **Recommended**: Use for shorter content or when effect is essential
 
-### Classic Style Performance  
+### Classic Style Performance
 - **Lower CPU usage**: Traditional word-level rendering
 - **Recommended**: Use for longer content or when performance is critical
 
@@ -495,7 +495,7 @@ Look for error messages in the response that indicate SubtitleSettings validatio
 ## Best Practices
 
 1. **Use Fallback Strategy**: Provide global config for defaults, JSON for customization
-2. **Validate Before Sending**: Check color formats and value ranges client-side
+2. **Validate Settings Before Sending**: Check color formats and value ranges client-side
 3. **Test Combinations**: Verify color contrast and readability
 4. **Performance First**: Use classic style for production unless progressive is required
 5. **Consistent Styling**: Define reusable subtitle style templates
