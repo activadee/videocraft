@@ -67,8 +67,8 @@ jobs:
       - name: Configure Git as Bot
         run: |
           # Configure git to use the bot identity for all commits
-          git config --local user.email "auto-doc-bot[bot]@users.noreply.github.com"
-          git config --local user.name "auto-doc-bot[bot]"
+          git config --global user.email "auto-doc-bot[bot]@users.noreply.github.com"
+          git config --global user.name "auto-doc-bot[bot]"
           
           # Set up authentication for push
           git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git
