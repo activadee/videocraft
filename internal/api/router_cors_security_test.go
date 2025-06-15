@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -129,6 +130,7 @@ func TestCORS_CSRFProtection(t *testing.T) {
 			Security: config.SecurityConfig{
 				EnableAuth:     false,
 				EnableCSRF:     true,
+				CSRFSecret:     "test-csrf-secret-for-testing-only-32-chars",
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -160,6 +162,7 @@ func TestCORS_CSRFProtection(t *testing.T) {
 			Security: config.SecurityConfig{
 				EnableAuth:     false,
 				EnableCSRF:     true,
+				CSRFSecret:     "test-csrf-secret-for-testing-only-32-chars",
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -182,12 +185,20 @@ func TestCORS_CSRFProtection(t *testing.T) {
 
 		// Extract CSRF token from response
 		require.Equal(t, http.StatusOK, tokenW.Code, "Should be able to get CSRF token")
+		
+		var tokenResponse map[string]interface{}
+		err := json.Unmarshal(tokenW.Body.Bytes(), &tokenResponse)
+		require.NoError(t, err, "Should be able to parse CSRF token response")
+		
+		csrfToken, ok := tokenResponse["csrf_token"].(string)
+		require.True(t, ok, "Response should contain csrf_token field")
+		require.NotEmpty(t, csrfToken, "CSRF token should not be empty")
 
 		// Test POST request with CSRF token
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/generate-video", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Origin", "https://trusted.example.com")
-		req.Header.Set("X-CSRF-Token", "valid-csrf-token") // In real implementation, extract from tokenW
+		req.Header.Set("X-CSRF-Token", csrfToken)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)

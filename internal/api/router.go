@@ -55,10 +55,7 @@ func setupMiddleware(router *gin.Engine, cfg *config.Config, log logger.Logger) 
 		router.Use(middleware.RateLimit(cfg.Security.RateLimit))
 	}
 
-	// Authentication middleware (if enabled)
-	if cfg.Security.EnableAuth {
-		router.Use(middleware.Auth(cfg.Security.APIKey))
-	}
+	// Authentication middleware will be applied per route group, not globally
 }
 
 func setupRoutes(
@@ -79,8 +76,11 @@ func setupRoutes(
 	// CSRF token endpoint (no auth required) - must be outside authenticated groups
 	router.GET("/api/v1/csrf-token", middleware.CSRFTokenEndpoint(cfg, log))
 
-	// API v1 routes
+	// API v1 routes with authentication
 	v1 := router.Group("/api/v1")
+	if cfg.Security.EnableAuth {
+		v1.Use(middleware.Auth(cfg.Security.APIKey))
+	}
 
 	// Video generation
 	v1.POST("/generate-video", videoHandler.GenerateVideo)
