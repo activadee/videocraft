@@ -22,6 +22,12 @@ type ASSConfig struct {
 	OutlineColor string
 	OutlineWidth int
 	ShadowOffset int
+	
+	// Extended fields to support all SubtitleSettings fields
+	Style        string
+	LineColor    string
+	ShadowColor  string
+	BoxColor     string
 }
 
 // SubtitleEvent represents a single subtitle event
@@ -35,6 +41,47 @@ type SubtitleEvent struct {
 // NewASSGenerator creates a new ASS generator with configuration
 func NewASSGenerator(config ASSConfig) *ASSGenerator {
 	return &ASSGenerator{config: config}
+}
+
+// NewASSGeneratorFromSubtitleSettings creates ASS generator from SubtitleSettings struct
+// Merges SubtitleSettings with default configuration, with SubtitleSettings taking precedence
+func NewASSGeneratorFromSubtitleSettings(settings models.SubtitleSettings, defaults ASSConfig) *ASSGenerator {
+	config := ASSConfig{
+		// Use SubtitleSettings values if provided, otherwise use defaults
+		FontFamily:   firstNonEmpty(settings.FontFamily, defaults.FontFamily),
+		FontSize:     firstNonZero(settings.FontSize, defaults.FontSize),
+		Position:     firstNonEmpty(settings.Position, defaults.Position),
+		WordColor:    firstNonEmpty(settings.WordColor, defaults.WordColor),
+		OutlineColor: firstNonEmpty(settings.OutlineColor, defaults.OutlineColor),
+		OutlineWidth: firstNonZero(settings.OutlineWidth, defaults.OutlineWidth),
+		ShadowOffset: firstNonZero(settings.ShadowOffset, defaults.ShadowOffset),
+		Style:        firstNonEmpty(settings.Style, defaults.Style),
+		LineColor:    firstNonEmpty(settings.LineColor, defaults.LineColor),
+		ShadowColor:  firstNonEmpty(settings.ShadowColor, defaults.ShadowColor),
+		BoxColor:     firstNonEmpty(settings.BoxColor, defaults.BoxColor),
+	}
+	
+	return &ASSGenerator{config: config}
+}
+
+// Helper functions for merging settings
+func firstNonEmpty(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
+func firstNonZero(a, b int) int {
+	if a != 0 {
+		return a
+	}
+	return b
+}
+
+// GetConfig returns the current ASS configuration (for testing)
+func (g *ASSGenerator) GetConfig() ASSConfig {
+	return g.config
 }
 
 // GenerateASS creates complete ASS file content from subtitle events
@@ -55,10 +102,30 @@ func (g *ASSGenerator) GenerateASS(events []SubtitleEvent) string {
 func (g *ASSGenerator) generateHeader() string {
 	wordColor := g.parseColorToASS(g.config.WordColor)
 	outlineColor := g.parseColorToASS(g.config.OutlineColor)
+	
+	// Use LineColor for secondary color, fallback to WordColor (same as primary)
+	lineColor := wordColor // Use the actual wordColor from config, not default
+	if g.config.LineColor != "" {
+		lineColor = g.parseColorToASS(g.config.LineColor)
+	}
+	
+	// Use BoxColor for background color, fallback to default black
+	boxColor := "&H00000000"
+	if g.config.BoxColor != "" {
+		boxColor = g.parseColorToASS(g.config.BoxColor)
+	}
+	
 	alignment := g.getAlignment(g.config.Position)
 
+	// Include style in title if specified
+	title := "Generated Progressive Subtitles"
+	if g.config.Style != "" {
+		// Keep original case and also add capitalized version for readability
+		title = fmt.Sprintf("Generated %s (%s) Subtitles", strings.Title(g.config.Style), g.config.Style)
+	}
+
 	return fmt.Sprintf(`[Script Info]
-Title: Generated Progressive Subtitles
+Title: %s
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
@@ -66,15 +133,17 @@ YCbCr Matrix: TV.709
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,%s,%d,%s,%s,%s,&H00000000,1,0,0,0,100,100,0,0,1,%d,%d,%d,10,10,20,1
+Style: Default,%s,%d,%s,%s,%s,%s,1,0,0,0,100,100,0,0,1,%d,%d,%d,10,10,20,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`,
+		title,          // Dynamic title with style
 		g.config.FontFamily,
 		g.config.FontSize,
-		wordColor,
-		wordColor, // Secondary color same as primary for progressive
-		outlineColor,
+		wordColor,      // PrimaryColour
+		lineColor,      // SecondaryColour (LineColor)
+		outlineColor,   // OutlineColour
+		boxColor,       // BackColour (BoxColor)
 		g.config.OutlineWidth,
 		g.config.ShadowOffset,
 		alignment,
@@ -145,6 +214,17 @@ func (g *ASSGenerator) getAlignment(position string) int {
 		"left-top":      7,
 		"center-top":    8,
 		"right-top":     9,
+		
+		// Alternative naming conventions
+		"bottom-left":   1,
+		"bottom-center": 2,
+		"bottom-right":  3,
+		"middle-left":   4,
+		"middle-center": 5,
+		"middle-right":  6,
+		"top-left":      7,
+		"top-center":    8,
+		"top-right":     9,
 	}
 
 	if alignment, exists := alignmentMap[position]; exists {
