@@ -204,11 +204,13 @@ VideoCraft implements comprehensive HTTP-level security through specialized midd
 - **Comprehensive Security Logging**: Structured audit trail
 
 **Configuration:**
-```go
-// Environment variable
+```bash
+# Environment variable
 VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="trusted.example.com,api.trusted.org"
+```
 
-// YAML configuration
+```yaml
+# YAML configuration
 security:
   allowed_domains:
     - "trusted.example.com"

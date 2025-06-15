@@ -69,7 +69,7 @@ All security events MUST be logged with structured data:
 - **HIGH Threat Level**: Immediate alert required
 - **Repeated Violations**: Rate-based alerting
 - **Suspicious Patterns**: Pattern-based detection
-- **Token Injection**: Malformed CSRF token attempts of injection
+- **Token Injection**: Malformed CSRF token injection attempts
 
 ## ❌ Prohibited Configurations
 

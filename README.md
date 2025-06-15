@@ -100,7 +100,7 @@ The server will start on `http://localhost:8080`
 
 ## API Usage
 
-🔐 **SECURITY REQUIREMENTS (v1.1.0+)**
+### 🔐 SECURITY REQUIREMENTS (v1.1.0+)
 
 ### ⚠️ Critical Security Setup Required
 
@@ -544,7 +544,7 @@ fetch('http://api.videocraft.com/generate-video', {
 
 ### 🔄 Rollback Plan
 
-If you need to rollback from v1.1.0+ to v1.0.x:
+If you need to roll back from v1.1.0+ to v1.0.x:
 
 ```bash
 # Temporarily disable security features (emergency only)
