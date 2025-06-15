@@ -93,3 +93,168 @@ func InternalError(err error) *VideoProcessingError {
 		fmt.Sprintf("Internal server error: %v", err),
 		map[string]interface{}{"original_error": err.Error()})
 }
+
+// Secure error handling functions
+
+// SanitizeForClient returns a generic error message safe for client consumption
+func SanitizeForClient(err error) string {
+	if vpe, ok := err.(*VideoProcessingError); ok {
+		switch vpe.Code {
+		case ErrCodeFFmpegFailed:
+			return "Video processing failed"
+		case ErrCodeFileNotFound:
+			return "File not found"
+		case ErrCodeDownloadFailed:
+			return "Download failed"
+		case ErrCodeTranscriptionFailed:
+			return "Transcription failed"
+		case ErrCodeStorageFailed:
+			return "Storage operation failed"
+		case ErrCodeTimeout:
+			return "Request timeout"
+		case ErrCodeInvalidInput:
+			return "Invalid input provided"
+		case ErrCodeJobNotFound:
+			return "Job not found"
+		case ErrCodeInternalError:
+			return "Internal server error occurred"
+		default:
+			return "An error occurred"
+		}
+	}
+	
+	// For non-domain errors, return generic message
+	return "An error occurred"
+}
+
+// GetServerDetails returns detailed error information for server-side logging
+func GetServerDetails(err error) string {
+	if vpe, ok := err.(*VideoProcessingError); ok {
+		return vpe.Message
+	}
+	return err.Error()
+}
+
+// GetErrorCode returns the standardized error code
+func GetErrorCode(err *VideoProcessingError) string {
+	return err.Code
+}
+
+// GetLogContext returns structured context for logging
+func GetLogContext(err error) map[string]interface{} {
+	logContext := make(map[string]interface{})
+	
+	if vpe, ok := err.(*VideoProcessingError); ok {
+		logContext["error_type"] = "VideoProcessingError"
+		logContext["error_code"] = vpe.Code
+		logContext["original_error"] = vpe.Message
+		
+		// Add details if available
+		if vpe.Details != nil {
+			logContext["error_details"] = vpe.Details
+		}
+	} else {
+		logContext["error_type"] = "UnknownError"
+		logContext["error_code"] = "UNKNOWN"
+		logContext["original_error"] = err.Error()
+	}
+	
+	return logContext
+}
+
+// ToClientResponse returns a safe client response structure
+func ToClientResponse(err error) map[string]interface{} {
+	response := make(map[string]interface{})
+	
+	if vpe, ok := err.(*VideoProcessingError); ok {
+		response["error"] = SanitizeForClient(err)
+		response["code"] = vpe.Code
+	} else {
+		response["error"] = "An error occurred"
+		response["code"] = "UNKNOWN_ERROR"
+	}
+	
+	return response
+}
+
+// IsSecuritySensitive determines if an error contains security-sensitive information
+func IsSecuritySensitive(err error) bool {
+	if vpe, ok := err.(*VideoProcessingError); ok {
+		// Check for sensitive patterns in error message
+		sensitivePatterns := []string{
+			"/etc/",
+			"/root/",
+			"/home/",
+			"/var/lib/",
+			".ssh/",
+			"passwd",
+			"shadow",
+			"mysql://",
+			"postgres://",
+			"mongodb://",
+			"localhost:",
+			"127.0.0.1:",
+			"internal.",
+			"admin",
+			"secret",
+			"private",
+		}
+		
+		message := vpe.Message
+		for _, pattern := range sensitivePatterns {
+			if contains(message, pattern) {
+				return true
+			}
+		}
+		
+		// Check error details for sensitive information
+		if vpe.Details != nil {
+			for key, value := range vpe.Details {
+				if contains(key, "password") || contains(key, "secret") || contains(key, "token") {
+					return true
+				}
+				if str, ok := value.(string); ok {
+					for _, pattern := range sensitivePatterns {
+						if contains(str, pattern) {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return false
+}
+
+// LogSecurityEvent returns structured logging information for security-sensitive errors
+func LogSecurityEvent(err error) map[string]interface{} {
+	logEntry := GetLogContext(err)
+	logEntry["SECURITY_SENSITIVE"] = true
+	logEntry["alert_level"] = "HIGH"
+	
+	if vpe, ok := err.(*VideoProcessingError); ok {
+		logEntry["error_type"] = vpe.Code
+	}
+	
+	return logEntry
+}
+
+// Helper function for case-insensitive string contains
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || 
+		len(s) > len(substr) && 
+		(s[:len(substr)] == substr || 
+		 s[len(s)-len(substr):] == substr || 
+		 indexOfSubstring(s, substr) >= 0))
+}
+
+// Simple substring search
+func indexOfSubstring(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
+}

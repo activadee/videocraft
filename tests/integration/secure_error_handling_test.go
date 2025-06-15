@@ -40,8 +40,8 @@ func TestSecureErrorHandling_EndToEnd(t *testing.T) {
 	// Create router with secure error handling
 	router := gin.New()
 	
-	// This should fail - SecureErrorHandler doesn't exist yet
-	router.Use(middleware.SecureErrorHandler(logger.NewNoop()))
+	// Use SecureErrorHandler with noop logger
+	router.Use(middleware.SecureErrorHandler(newNoopLogger()))
 	router.Use(middleware.Auth(cfg.Auth.APIKey))
 	
 	// Setup handlers
@@ -206,8 +206,8 @@ func TestSecureErrorHandling_ValidationErrors(t *testing.T) {
 	// Setup router
 	router := gin.New()
 	
-	// This should fail - SecureErrorHandler doesn't exist yet
-	router.Use(middleware.SecureErrorHandler(logger.NewNoop()))
+	// Use SecureErrorHandler with noop logger
+	router.Use(middleware.SecureErrorHandler(newNoopLogger()))
 	
 	// Add test endpoint that validates JSON
 	router.POST("/test", func(c *gin.Context) {
@@ -276,8 +276,8 @@ func TestSecureErrorHandling_PanicRecovery(t *testing.T) {
 	// Create router with secure error handling
 	router := gin.New()
 	
-	// This should fail - SecureErrorHandler doesn't exist yet
-	router.Use(middleware.SecureErrorHandler(logger.NewNoop()))
+	// Use SecureErrorHandler with noop logger
+	router.Use(middleware.SecureErrorHandler(newNoopLogger()))
 	
 	// Add route that panics
 	router.GET("/panic", func(c *gin.Context) {
@@ -350,3 +350,23 @@ func (mjs *mockJobService) ProcessJob(ctx context.Context, job *models.Job) erro
 func (mjs *mockJobService) UpdateJobProgress(id string, progress int) error {
 	return nil
 }
+
+// noopLogger implements logger.Logger for testing with no-op behavior
+type noopLogger struct{}
+
+func newNoopLogger() logger.Logger {
+	return &noopLogger{}
+}
+
+func (nl *noopLogger) Debug(args ...interface{})                         {}
+func (nl *noopLogger) Info(args ...interface{})                          {}
+func (nl *noopLogger) Warn(args ...interface{})                          {}
+func (nl *noopLogger) Error(args ...interface{})                         {}
+func (nl *noopLogger) Fatal(args ...interface{})                         {}
+func (nl *noopLogger) Debugf(format string, args ...interface{})         {}
+func (nl *noopLogger) Infof(format string, args ...interface{})          {}
+func (nl *noopLogger) Warnf(format string, args ...interface{})          {}
+func (nl *noopLogger) Errorf(format string, args ...interface{})         {}
+func (nl *noopLogger) Fatalf(format string, args ...interface{})         {}
+func (nl *noopLogger) WithField(key string, value interface{}) logger.Logger { return nl }
+func (nl *noopLogger) WithFields(fields map[string]interface{}) logger.Logger { return nl }

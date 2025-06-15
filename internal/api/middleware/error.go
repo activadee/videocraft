@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -9,7 +10,13 @@ import (
 	"github.com/activadee/videocraft/pkg/logger"
 )
 
+// ErrorHandler provides backward compatibility - now uses SecureErrorHandler
 func ErrorHandler(log logger.Logger) gin.HandlerFunc {
+	return SecureErrorHandler(log)
+}
+
+// Legacy error handler - deprecated, use SecureErrorHandler instead
+func LegacyErrorHandler(log logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 
@@ -17,22 +24,51 @@ func ErrorHandler(log logger.Logger) gin.HandlerFunc {
 		if len(c.Errors) > 0 {
 			err := c.Errors.Last()
 
-			log.WithField("error", err.Error()).Error("Request error")
+			// Extract request context for security logging
+			requestContext := map[string]interface{}{
+				"client_ip":   c.ClientIP(),
+				"user_agent":  c.Request.UserAgent(),
+				"method":      c.Request.Method,
+				"path":        c.Request.URL.Path,
+				"request_id":  c.GetHeader("X-Request-ID"),
+				"timestamp":   time.Now(),
+			}
+
+			// Check if this is a security-sensitive error
+			if errors.IsSecuritySensitive(err.Err) {
+				// Log security event
+				securityLogEntry := errors.LogSecurityEvent(err.Err)
+				for key, value := range requestContext {
+					securityLogEntry[key] = value
+				}
+				log.WithFields(securityLogEntry).Error("SECURITY_VIOLATION: Security-sensitive error detected")
+			} else {
+				// Normal logging
+				log.WithField("error", err.Error()).Error("Request error")
+			}
 
 			// Check if it's our custom error type
 			if vpe, ok := err.Err.(*errors.VideoProcessingError); ok {
 				status := getStatusFromErrorCode(vpe.Code)
-				c.JSON(status, gin.H{
-					"error": vpe.Message,
-					"code":  vpe.Code,
-				})
+				
+				// Create secure response
+				response := gin.H{
+					"error":      errors.SanitizeForClient(err.Err),
+					"code":       vpe.Code,
+					"request_id": c.GetHeader("X-Request-ID"),
+					"timestamp":  time.Now().Format(time.RFC3339),
+				}
+				
+				c.JSON(status, response)
 				return
 			}
 
-			// Generic error handling
+			// Generic error handling with secure response
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error",
-				"code":  "INTERNAL_ERROR",
+				"error":      "Internal server error occurred",
+				"code":       "INTERNAL_ERROR",
+				"request_id": c.GetHeader("X-Request-ID"),
+				"timestamp":  time.Now().Format(time.RFC3339),
 			})
 		}
 	}

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -88,12 +87,16 @@ func TestSecureErrorHandler_NoStackTraceExposure(t *testing.T) {
 			// Create router with secure error handler
 			router := gin.New()
 			
-			// This should fail - SecureErrorHandler doesn't exist yet
-			router.Use(SecureErrorHandler(logger.NewNoop()))
+			// Use SecureErrorHandler with noop logger
+			router.Use(SecureErrorHandler(newNoopLogger()))
 			
 			// Add test route that triggers error
 			router.GET("/test", func(c *gin.Context) {
 				tt.setupError(c)
+				// Don't send success response if there's an error
+				if len(c.Errors) > 0 {
+					return
+				}
 				c.JSON(http.StatusOK, gin.H{"status": "ok"})
 			})
 
@@ -184,8 +187,8 @@ func TestSecureErrorHandler_StandardizedErrorCodes(t *testing.T) {
 			// Create router with secure error handler
 			router := gin.New()
 			
-			// This should fail - SecureErrorHandler doesn't exist yet
-			router.Use(SecureErrorHandler(logger.NewNoop()))
+			// Use SecureErrorHandler with noop logger
+			router.Use(SecureErrorHandler(newNoopLogger()))
 			
 			// Add test route that triggers specific error
 			router.GET("/test", func(c *gin.Context) {
@@ -321,8 +324,8 @@ func TestSecureErrorHandler_NoErrorDetails(t *testing.T) {
 	// Create router
 	router := gin.New()
 	
-	// This should fail - SecureErrorHandler doesn't exist yet
-	router.Use(SecureErrorHandler(logger.NewNoop()))
+	// Use SecureErrorHandler with noop logger
+	router.Use(SecureErrorHandler(newNoopLogger()))
 	
 	router.GET("/test", func(c *gin.Context) {
 		// Create error with sensitive details
@@ -358,25 +361,69 @@ func TestSecureErrorHandler_NoErrorDetails(t *testing.T) {
 	assert.NotContains(t, body, "goroutine")
 }
 
+// noopLogger implements logger.Logger for testing with no-op behavior
+type noopLogger struct{}
+
+func newNoopLogger() logger.Logger {
+	return &noopLogger{}
+}
+
+func (nl *noopLogger) Debug(args ...interface{})                         {}
+func (nl *noopLogger) Info(args ...interface{})                          {}
+func (nl *noopLogger) Warn(args ...interface{})                          {}
+func (nl *noopLogger) Error(args ...interface{})                         {}
+func (nl *noopLogger) Fatal(args ...interface{})                         {}
+func (nl *noopLogger) Debugf(format string, args ...interface{})         {}
+func (nl *noopLogger) Infof(format string, args ...interface{})          {}
+func (nl *noopLogger) Warnf(format string, args ...interface{})          {}
+func (nl *noopLogger) Errorf(format string, args ...interface{})         {}
+func (nl *noopLogger) Fatalf(format string, args ...interface{})         {}
+func (nl *noopLogger) WithField(key string, value interface{}) logger.Logger { return nl }
+func (nl *noopLogger) WithFields(fields map[string]interface{}) logger.Logger { return nl }
+
 // testLogger captures log entries for testing
 type testLogger struct {
 	entries *[]map[string]interface{}
 }
 
-func (tl *testLogger) Info(msg string) {
-	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "info", "message": msg})
+func (tl *testLogger) Debug(args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "debug", "message": args})
 }
 
-func (tl *testLogger) Error(msg string) {
-	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "error", "message": msg})
+func (tl *testLogger) Info(args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "info", "message": args})
 }
 
-func (tl *testLogger) Debug(msg string) {
-	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "debug", "message": msg})
+func (tl *testLogger) Warn(args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "warn", "message": args})
 }
 
-func (tl *testLogger) Warn(msg string) {
-	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "warn", "message": msg})
+func (tl *testLogger) Error(args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "error", "message": args})
+}
+
+func (tl *testLogger) Fatal(args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "fatal", "message": args})
+}
+
+func (tl *testLogger) Debugf(format string, args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "debug", "message": args})
+}
+
+func (tl *testLogger) Infof(format string, args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "info", "message": args})
+}
+
+func (tl *testLogger) Warnf(format string, args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "warn", "message": args})
+}
+
+func (tl *testLogger) Errorf(format string, args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "error", "message": args})
+}
+
+func (tl *testLogger) Fatalf(format string, args ...interface{}) {
+	*tl.entries = append(*tl.entries, map[string]interface{}{"level": "fatal", "message": args})
 }
 
 func (tl *testLogger) WithField(key string, value interface{}) logger.Logger {
@@ -400,32 +447,80 @@ type testLoggerWithFields struct {
 	fields map[string]interface{}
 }
 
-func (tlwf *testLoggerWithFields) Info(msg string) {
-	entry := map[string]interface{}{"level": "info", "message": msg}
+func (tlwf *testLoggerWithFields) Debug(args ...interface{}) {
+	entry := map[string]interface{}{"level": "debug", "message": args}
 	for k, v := range tlwf.fields {
 		entry[k] = v
 	}
 	*tlwf.entries = append(*tlwf.entries, entry)
 }
 
-func (tlwf *testLoggerWithFields) Error(msg string) {
-	entry := map[string]interface{}{"level": "error", "message": msg}
+func (tlwf *testLoggerWithFields) Info(args ...interface{}) {
+	entry := map[string]interface{}{"level": "info", "message": args}
 	for k, v := range tlwf.fields {
 		entry[k] = v
 	}
 	*tlwf.entries = append(*tlwf.entries, entry)
 }
 
-func (tlwf *testLoggerWithFields) Debug(msg string) {
-	entry := map[string]interface{}{"level": "debug", "message": msg}
+func (tlwf *testLoggerWithFields) Warn(args ...interface{}) {
+	entry := map[string]interface{}{"level": "warn", "message": args}
 	for k, v := range tlwf.fields {
 		entry[k] = v
 	}
 	*tlwf.entries = append(*tlwf.entries, entry)
 }
 
-func (tlwf *testLoggerWithFields) Warn(msg string) {
-	entry := map[string]interface{}{"level": "warn", "message": msg}
+func (tlwf *testLoggerWithFields) Error(args ...interface{}) {
+	entry := map[string]interface{}{"level": "error", "message": args}
+	for k, v := range tlwf.fields {
+		entry[k] = v
+	}
+	*tlwf.entries = append(*tlwf.entries, entry)
+}
+
+func (tlwf *testLoggerWithFields) Fatal(args ...interface{}) {
+	entry := map[string]interface{}{"level": "fatal", "message": args}
+	for k, v := range tlwf.fields {
+		entry[k] = v
+	}
+	*tlwf.entries = append(*tlwf.entries, entry)
+}
+
+func (tlwf *testLoggerWithFields) Debugf(format string, args ...interface{}) {
+	entry := map[string]interface{}{"level": "debug", "message": args}
+	for k, v := range tlwf.fields {
+		entry[k] = v
+	}
+	*tlwf.entries = append(*tlwf.entries, entry)
+}
+
+func (tlwf *testLoggerWithFields) Infof(format string, args ...interface{}) {
+	entry := map[string]interface{}{"level": "info", "message": args}
+	for k, v := range tlwf.fields {
+		entry[k] = v
+	}
+	*tlwf.entries = append(*tlwf.entries, entry)
+}
+
+func (tlwf *testLoggerWithFields) Warnf(format string, args ...interface{}) {
+	entry := map[string]interface{}{"level": "warn", "message": args}
+	for k, v := range tlwf.fields {
+		entry[k] = v
+	}
+	*tlwf.entries = append(*tlwf.entries, entry)
+}
+
+func (tlwf *testLoggerWithFields) Errorf(format string, args ...interface{}) {
+	entry := map[string]interface{}{"level": "error", "message": args}
+	for k, v := range tlwf.fields {
+		entry[k] = v
+	}
+	*tlwf.entries = append(*tlwf.entries, entry)
+}
+
+func (tlwf *testLoggerWithFields) Fatalf(format string, args ...interface{}) {
+	entry := map[string]interface{}{"level": "fatal", "message": args}
 	for k, v := range tlwf.fields {
 		entry[k] = v
 	}
