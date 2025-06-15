@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/activadee/videocraft/compare/v1.0.0...v1.0.1) (2025-06-15)
+
+
+### Bug Fixes
+
+* implement secure CORS configuration and CSRF protection ([#17](https://github.com/activadee/videocraft/issues/17)) ([#48](https://github.com/activadee/videocraft/issues/48)) ([e5e671d](https://github.com/activadee/videocraft/commit/e5e671dd847a6bfcba1bb286df19b334a2b657c4))
+
 # 1.0.0 (2025-06-15)
 
 
