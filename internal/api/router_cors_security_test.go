@@ -19,7 +19,7 @@ func TestCORS_WildcardOriginsRemoved(t *testing.T) {
 	t.Run("should reject wildcard CORS origins", func(t *testing.T) {
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false, // Disable auth for CORS testing
+				EnableAuth:     false, // Disable auth for CORS testing
 				AllowedDomains: []string{"trusted.example.com", "api.trusted.org"},
 			},
 			Log: config.LogConfig{
@@ -54,7 +54,7 @@ func TestCORS_DomainAllowlisting(t *testing.T) {
 	t.Run("should only allow approved domains", func(t *testing.T) {
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false,
+				EnableAuth:     false,
 				AllowedDomains: []string{"trusted.example.com", "api.trusted.org"},
 			},
 			Log: config.LogConfig{
@@ -69,33 +69,33 @@ func TestCORS_DomainAllowlisting(t *testing.T) {
 		router := NewRouter(cfg, services, testLogger)
 
 		testCases := []struct {
-			name           string
-			origin         string
+			name            string
+			origin          string
 			shouldBeAllowed bool
 		}{
 			{
-				name:           "trusted domain should be allowed",
-				origin:         "https://trusted.example.com",
+				name:            "trusted domain should be allowed",
+				origin:          "https://trusted.example.com",
 				shouldBeAllowed: true,
 			},
 			{
-				name:           "second trusted domain should be allowed",
-				origin:         "https://api.trusted.org",
+				name:            "second trusted domain should be allowed",
+				origin:          "https://api.trusted.org",
 				shouldBeAllowed: true,
 			},
 			{
-				name:           "untrusted domain should be rejected",
-				origin:         "https://malicious.example.com",
+				name:            "untrusted domain should be rejected",
+				origin:          "https://malicious.example.com",
 				shouldBeAllowed: false,
 			},
 			{
-				name:           "subdomain of trusted domain should be rejected",
-				origin:         "https://sub.trusted.example.com",
+				name:            "subdomain of trusted domain should be rejected",
+				origin:          "https://sub.trusted.example.com",
 				shouldBeAllowed: false,
 			},
 			{
-				name:           "similar domain should be rejected",
-				origin:         "https://trusted.example.com.evil.org",
+				name:            "similar domain should be rejected",
+				origin:          "https://trusted.example.com.evil.org",
 				shouldBeAllowed: false,
 			},
 		}
@@ -127,8 +127,8 @@ func TestCORS_CSRFProtection(t *testing.T) {
 	t.Run("should implement CSRF token validation", func(t *testing.T) {
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false,
-				EnableCSRF:      true,
+				EnableAuth:     false,
+				EnableCSRF:     true,
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -158,8 +158,8 @@ func TestCORS_CSRFProtection(t *testing.T) {
 	t.Run("should accept requests with valid CSRF token", func(t *testing.T) {
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false,
-				EnableCSRF:      true,
+				EnableAuth:     false,
+				EnableCSRF:     true,
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -182,7 +182,7 @@ func TestCORS_CSRFProtection(t *testing.T) {
 
 		// Extract CSRF token from response
 		require.Equal(t, http.StatusOK, tokenW.Code, "Should be able to get CSRF token")
-		
+
 		// Test POST request with CSRF token
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/generate-video", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json")
@@ -202,7 +202,7 @@ func TestCORS_ProperHeaders(t *testing.T) {
 	t.Run("should set proper CORS headers", func(t *testing.T) {
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false,
+				EnableAuth:     false,
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -227,16 +227,16 @@ func TestCORS_ProperHeaders(t *testing.T) {
 
 		// Check required CORS headers
 		assert.Equal(t, "https://trusted.example.com", w.Header().Get("Access-Control-Allow-Origin"), "Should set proper Allow-Origin")
-		
+
 		allowMethods := w.Header().Get("Access-Control-Allow-Methods")
 		assert.Contains(t, allowMethods, "POST", "Should allow POST method")
 		assert.Contains(t, allowMethods, "GET", "Should allow GET method")
 		assert.NotContains(t, allowMethods, "TRACE", "Should not allow dangerous TRACE method")
-		
+
 		allowHeaders := w.Header().Get("Access-Control-Allow-Headers")
 		assert.Contains(t, allowHeaders, "Content-Type", "Should allow Content-Type header")
 		assert.Contains(t, allowHeaders, "Authorization", "Should allow Authorization header")
-		
+
 		// Should not allow credentials with multiple origins
 		credentials := w.Header().Get("Access-Control-Allow-Credentials")
 		if len(cfg.Security.AllowedDomains) > 1 {
@@ -247,7 +247,7 @@ func TestCORS_ProperHeaders(t *testing.T) {
 	t.Run("should reject dangerous methods", func(t *testing.T) {
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false,
+				EnableAuth:     false,
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -282,7 +282,7 @@ func TestCORS_PreflightHandling(t *testing.T) {
 	t.Run("should handle preflight requests properly", func(t *testing.T) {
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false,
+				EnableAuth:     false,
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -306,13 +306,13 @@ func TestCORS_PreflightHandling(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		// Should return 200 or 204 for preflight
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusNoContent, 
+		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusNoContent,
 			"Preflight request should return 200 or 204, got %d", w.Code)
 
 		// Should have CORS headers
 		assert.NotEmpty(t, w.Header().Get("Access-Control-Allow-Origin"), "Should have Allow-Origin header")
 		assert.NotEmpty(t, w.Header().Get("Access-Control-Allow-Methods"), "Should have Allow-Methods header")
-		
+
 		// Should have cache control for preflight
 		maxAge := w.Header().Get("Access-Control-Max-Age")
 		// CORS Max-Age header is sometimes not set for simple requests
@@ -326,7 +326,7 @@ func TestCORS_PreflightHandling(t *testing.T) {
 	t.Run("should reject preflight from unauthorized origin", func(t *testing.T) {
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false,
+				EnableAuth:     false,
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -363,7 +363,7 @@ func TestCORS_SecurityViolationLogging(t *testing.T) {
 
 		cfg := &config.Config{
 			Security: config.SecurityConfig{
-				EnableAuth:      false,
+				EnableAuth:     false,
 				AllowedDomains: []string{"trusted.example.com"},
 			},
 			Log: config.LogConfig{
@@ -386,8 +386,8 @@ func TestCORS_SecurityViolationLogging(t *testing.T) {
 		// Should log security violation
 		found := false
 		for _, msg := range testLogger.messages {
-			if strings.Contains(strings.ToUpper(msg), "CORS") && 
-			   strings.Contains(strings.ToUpper(msg), "VIOLATION") {
+			if strings.Contains(strings.ToUpper(msg), "CORS") &&
+				strings.Contains(strings.ToUpper(msg), "VIOLATION") {
 				found = true
 				break
 			}
@@ -401,35 +401,35 @@ type testLogger struct {
 	messages []string
 }
 
-func (t *testLogger) Debug(args ...interface{})                              { 
-	t.messages = append(t.messages, fmt.Sprintf("DEBUG: %v", args)) 
+func (t *testLogger) Debug(args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("DEBUG: %v", args))
 }
-func (t *testLogger) Info(args ...interface{})                               { 
-	t.messages = append(t.messages, fmt.Sprintf("INFO: %v", args)) 
+func (t *testLogger) Info(args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("INFO: %v", args))
 }
-func (t *testLogger) Warn(args ...interface{})                               { 
-	t.messages = append(t.messages, fmt.Sprintf("WARN: %v", args)) 
+func (t *testLogger) Warn(args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("WARN: %v", args))
 }
-func (t *testLogger) Error(args ...interface{})                              { 
-	t.messages = append(t.messages, fmt.Sprintf("ERROR: %v", args)) 
+func (t *testLogger) Error(args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("ERROR: %v", args))
 }
-func (t *testLogger) Fatal(args ...interface{})                              { 
-	t.messages = append(t.messages, fmt.Sprintf("FATAL: %v", args)) 
+func (t *testLogger) Fatal(args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("FATAL: %v", args))
 }
-func (t *testLogger) Debugf(format string, args ...interface{})              { 
-	t.messages = append(t.messages, fmt.Sprintf("DEBUG: "+format, args...)) 
+func (t *testLogger) Debugf(format string, args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("DEBUG: "+format, args...))
 }
-func (t *testLogger) Infof(format string, args ...interface{})               { 
-	t.messages = append(t.messages, fmt.Sprintf("INFO: "+format, args...)) 
+func (t *testLogger) Infof(format string, args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("INFO: "+format, args...))
 }
-func (t *testLogger) Warnf(format string, args ...interface{})               { 
-	t.messages = append(t.messages, fmt.Sprintf("WARN: "+format, args...)) 
+func (t *testLogger) Warnf(format string, args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("WARN: "+format, args...))
 }
-func (t *testLogger) Errorf(format string, args ...interface{})              { 
-	t.messages = append(t.messages, fmt.Sprintf("ERROR: "+format, args...)) 
+func (t *testLogger) Errorf(format string, args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("ERROR: "+format, args...))
 }
-func (t *testLogger) Fatalf(format string, args ...interface{})              { 
-	t.messages = append(t.messages, fmt.Sprintf("FATAL: "+format, args...)) 
+func (t *testLogger) Fatalf(format string, args ...interface{}) {
+	t.messages = append(t.messages, fmt.Sprintf("FATAL: "+format, args...))
 }
 func (t *testLogger) WithField(key string, value interface{}) logger.Logger  { return t }
 func (t *testLogger) WithFields(fields map[string]interface{}) logger.Logger { return t }

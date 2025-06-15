@@ -76,12 +76,12 @@ func setupRoutes(
 	router.GET("/live", healthHandler.Live)
 	router.GET("/metrics", healthHandler.Metrics)
 
+	// CSRF token endpoint (no auth required) - must be outside authenticated groups
+	router.GET("/api/v1/csrf-token", middleware.CSRFTokenEndpoint(cfg, log))
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
-	
-	// CSRF token endpoint (no auth required for getting token)
-	v1.GET("/csrf-token", middleware.CSRFTokenEndpoint(cfg, log))
-	
+
 	// Video generation
 	v1.POST("/generate-video", videoHandler.GenerateVideo)
 

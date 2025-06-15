@@ -42,7 +42,7 @@ func (oc *originCache) set(origin string, valid bool) {
 
 // SecureCORS creates a secure CORS middleware that:
 // 1. Removes wildcard origins (SECURITY FIX)
-// 2. Implements strict domain allowlisting  
+// 2. Implements strict domain allowlisting
 // 3. Logs security violations with structured data
 // 4. Configures secure CORS headers
 // 5. Caches origin validation for performance
@@ -60,9 +60,9 @@ func SecureCORS(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
 	cache := newOriginCache()
 
 	log.WithFields(map[string]interface{}{
-		"security_policy":  "CORS_DOMAIN_ALLOWLIST",
-		"allowed_domains":  cfg.Security.AllowedDomains,
-		"domains_count":    len(cfg.Security.AllowedDomains),
+		"security_policy":   "CORS_DOMAIN_ALLOWLIST",
+		"allowed_domains":   cfg.Security.AllowedDomains,
+		"domains_count":     len(cfg.Security.AllowedDomains),
 		"allow_credentials": len(cfg.Security.AllowedDomains) == 1,
 	}).Info("Secure CORS middleware initialized with domain allowlist")
 
@@ -87,7 +87,7 @@ func SecureCORS(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
 		},
 		AllowHeaders: []string{
 			"Origin",
-			"Content-Type", 
+			"Content-Type",
 			"Authorization",
 			"X-Requested-With",
 			"X-CSRF-Token", // Include CSRF token header
@@ -98,8 +98,8 @@ func SecureCORS(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
 		},
 		// SECURITY: Don't allow credentials with multiple domains
 		AllowCredentials: len(cfg.Security.AllowedDomains) == 1,
-		MaxAge:          43200, // 12 hours preflight cache (12 * 3600 seconds)
-		
+		MaxAge:           43200, // 12 hours preflight cache (12 * 3600 seconds)
+
 		// Custom origin validator with caching for performance
 		AllowOriginFunc: func(origin string) bool {
 			return validateOriginWithCache(origin, cfg.Security.AllowedDomains, cache, log)
@@ -129,26 +129,26 @@ func validateOrigin(origin string, allowedDomains []string, log logger.Logger) b
 		return true
 	}
 
-	// Additional security checks for malicious patterns
-	if containsSuspiciousPatterns(origin) {
-		log.WithFields(map[string]interface{}{
-			"origin":          origin,
-			"violation_type":  "CORS_SUSPICIOUS_ORIGIN",
-			"threat_level":    "HIGH",
-		}).Errorf("CORS_SECURITY_VIOLATION: Suspicious origin pattern detected: %s", origin)
-		return false
-	}
-
-	// Strict domain matching - no wildcards, no subdomains unless explicitly allowed
+	// First check if origin is explicitly allowed (before suspicious pattern check)
 	for _, allowedDomain := range allowedDomains {
 		if isExactDomainMatch(origin, allowedDomain) {
 			log.WithFields(map[string]interface{}{
-				"origin":        origin,
+				"origin":         origin,
 				"matched_domain": allowedDomain,
-				"action":        "CORS_ALLOW",
+				"action":         "CORS_ALLOW",
 			}).Debug("CORS origin validation: allowed")
 			return true
 		}
+	}
+
+	// Only check for suspicious patterns if the origin is NOT in allowed domains
+	if containsSuspiciousPatterns(origin) {
+		log.WithFields(map[string]interface{}{
+			"origin":         origin,
+			"violation_type": "CORS_SUSPICIOUS_ORIGIN",
+			"threat_level":   "HIGH",
+		}).Errorf("CORS_SECURITY_VIOLATION: Suspicious origin pattern detected: %s", origin)
+		return false
 	}
 
 	// Log security violation with enhanced context
@@ -165,6 +165,11 @@ func validateOrigin(origin string, allowedDomains []string, log logger.Logger) b
 
 // isExactDomainMatch checks if origin exactly matches an allowed domain
 func isExactDomainMatch(origin, allowedDomain string) bool {
+	// Handle domains that already include protocol
+	if strings.HasPrefix(allowedDomain, "http") {
+		return origin == allowedDomain
+	}
+	// Handle bare domains - check both HTTP and HTTPS
 	return origin == "https://"+allowedDomain || origin == "http://"+allowedDomain
 }
 
@@ -204,7 +209,7 @@ func extractClientIP(origin string) string {
 func rejectAllCORS(log logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		
+
 		// If there's an Origin header, it's a cross-origin request
 		if origin != "" {
 			log.WithFields(map[string]interface{}{
@@ -213,7 +218,7 @@ func rejectAllCORS(log logger.Logger) gin.HandlerFunc {
 				"path":           c.Request.URL.Path,
 				"violation_type": "CORS_NO_DOMAINS_CONFIGURED",
 			}).Warnf("CORS_SECURITY_VIOLATION: Cross-origin request rejected - no domains configured")
-			
+
 			c.JSON(http.StatusForbidden, gin.H{
 				"error": "Cross-origin requests not allowed",
 				"code":  "CORS_FORBIDDEN",
@@ -221,7 +226,7 @@ func rejectAllCORS(log logger.Logger) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Same-origin requests are allowed
 		c.Next()
 	}

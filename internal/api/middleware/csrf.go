@@ -1,8 +1,11 @@
 package middleware
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -19,7 +22,7 @@ const (
 
 // CSRFProtection implements robust CSRF protection middleware with:
 // 1. Token validation for state-changing requests
-// 2. Origin-based validation  
+// 2. Origin-based validation
 // 3. Security violation logging
 // 4. Rate limiting for invalid attempts
 func CSRFProtection(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
@@ -35,7 +38,7 @@ func CSRFProtection(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
 
 	log.WithFields(map[string]interface{}{
 		"security_policy": "CSRF_ENABLED",
-		"safe_methods":    []string{"GET", "HEAD", "OPTIONS", "TRACE"},
+		"safe_methods":    []string{"GET", "HEAD", "OPTIONS"},
 	}).Info("CSRF protection enabled for state-changing requests")
 
 	return func(c *gin.Context) {
@@ -127,20 +130,27 @@ func CSRFProtection(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
 	}
 }
 
-// GenerateCSRFToken generates a new CSRF token
+// GenerateCSRFToken generates a new CSRF token using HMAC for cryptographic security
 func GenerateCSRFToken(secret string) (string, error) {
+	if secret == "" {
+		return "", errors.New("CSRF secret is required for token generation")
+	}
+
 	// Generate random bytes
-	bytes := make([]byte, csrfTokenLength)
-	if _, err := rand.Read(bytes); err != nil {
+	randomBytes := make([]byte, csrfTokenLength)
+	if _, err := rand.Read(randomBytes); err != nil {
 		return "", err
 	}
 
-	// Simple HMAC-like token: hex(random_bytes) + hex(hash(secret + random_bytes))
-	randomHex := hex.EncodeToString(bytes)
-	
-	// For simplicity in testing, use a deterministic approach
-	// In production, use proper HMAC
-	return randomHex, nil
+	// Create HMAC: random_bytes + HMAC(secret, random_bytes)
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(randomBytes)
+	signature := mac.Sum(nil)
+
+	// Combine random bytes and signature: hex(random_bytes) + hex(signature)
+	token := hex.EncodeToString(randomBytes) + hex.EncodeToString(signature)
+
+	return token, nil
 }
 
 // isValidTokenFormat performs basic token format validation
@@ -166,16 +176,41 @@ func isValidTokenFormat(token string) bool {
 	return true
 }
 
-// isValidCSRFToken validates a CSRF token with enhanced security
+// isValidCSRFToken validates a CSRF token using HMAC cryptographic verification
 func isValidCSRFToken(token, secret string) bool {
-	// For testing purposes, accept any non-empty token when secret is empty
-	if secret == "" && token != "" {
-		return true
+	if secret == "" {
+		return false // mis-configuration: require secret
 	}
 
-	// In a real implementation, this would validate HMAC
-	// For now, accept the "valid-csrf-token" used in tests or tokens >= 32 chars
-	return token == "valid-csrf-token" || (len(token) >= 32 && isHexadecimal(token))
+	// Token should be: hex(random_bytes) + hex(signature)
+	// Total length: 32 bytes random + 32 bytes signature = 128 hex chars
+	expectedLength := (csrfTokenLength + sha256.Size) * 2
+	if len(token) != expectedLength {
+		return false
+	}
+
+	// Extract random bytes and signature
+	randomBytesHex := token[:csrfTokenLength*2]
+	signatureHex := token[csrfTokenLength*2:]
+
+	// Decode hex strings
+	randomBytes, err := hex.DecodeString(randomBytesHex)
+	if err != nil {
+		return false
+	}
+
+	providedSignature, err := hex.DecodeString(signatureHex)
+	if err != nil {
+		return false
+	}
+
+	// Compute expected signature
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(randomBytes)
+	expectedSignature := mac.Sum(nil)
+
+	// Use constant-time comparison to prevent timing attacks
+	return hmac.Equal(providedSignature, expectedSignature)
 }
 
 // isHexadecimal checks if a string contains only hexadecimal characters
@@ -191,7 +226,7 @@ func isHexadecimal(s string) bool {
 // isSafeMethod checks if the HTTP method is safe (doesn't require CSRF protection)
 func isSafeMethod(method string) bool {
 	switch strings.ToUpper(method) {
-	case "GET", "HEAD", "OPTIONS", "TRACE":
+	case "GET", "HEAD", "OPTIONS":
 		return true
 	default:
 		return false
@@ -219,10 +254,10 @@ func CSRFTokenEndpoint(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
 
 		// Log token generation request for audit trail
 		log.WithFields(map[string]interface{}{
-			"client_ip":   clientIP,
-			"origin":      origin,
-			"user_agent":  userAgent,
-			"action":      "CSRF_TOKEN_REQUEST",
+			"client_ip":  clientIP,
+			"origin":     origin,
+			"user_agent": userAgent,
+			"action":     "CSRF_TOKEN_REQUEST",
 		}).Info("CSRF token generation requested")
 
 		token, err := GenerateCSRFToken(cfg.Security.CSRFSecret)

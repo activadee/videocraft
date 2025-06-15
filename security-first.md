@@ -69,7 +69,7 @@ All security events MUST be logged with structured data:
 - **HIGH Threat Level**: Immediate alert required
 - **Repeated Violations**: Rate-based alerting
 - **Suspicious Patterns**: Pattern-based detection
-- **Token Injection**: Malformed CSRF token attempts
+- **Token Injection**: Malformed CSRF token attempts of injection
 
 ## ❌ Prohibited Configurations
 
@@ -78,7 +78,7 @@ All security events MUST be logged with structured data:
 - `localhost` domains in production
 - Unencrypted CSRF secrets
 - Disabled authentication in production
-- Missing rate limiting
+- Missing rate-limiting
 - Debug mode in production
 
 ### Dangerous Patterns

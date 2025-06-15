@@ -197,7 +197,7 @@ VideoCraft implements comprehensive HTTP-level security through specialized midd
 #### CORS Security (`internal/api/middleware/cors.go`)
 
 **Key Features:**
-- **Zero Wildcard Policy**: Completely eliminates `AllowOrigins: ["*"]` vulnerability
+- **Zero Wildcard Policy**: Eliminates `AllowOrigins: ["*"]` vulnerability
 - **Strict Domain Allowlisting**: Only explicitly configured domains permitted
 - **Origin Validation Caching**: Thread-safe performance optimization
 - **Suspicious Pattern Detection**: Blocks malicious origin patterns

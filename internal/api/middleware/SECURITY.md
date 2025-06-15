@@ -9,7 +9,7 @@ This package implements comprehensive security middleware for the VideoCraft API
 ### 1. Secure CORS Implementation (`cors.go`)
 
 #### Key Security Features
-- **Wildcard Origin Removal**: Completely eliminates `AllowOrigins: ["*"]` vulnerability
+- **Wildcard Origin Removal**: Eliminates `AllowOrigins: ["*"]` vulnerability
 - **Strict Domain Allowlisting**: Only explicitly configured domains are permitted
 - **Origin Validation Caching**: Performance optimization with thread-safe cache
 - **Suspicious Pattern Detection**: Blocks malicious origin patterns
