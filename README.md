@@ -665,7 +665,7 @@ VideoCraft includes an AI-powered documentation review system using Claude AI to
 2. Or install the Claude GitHub app (for OAuth integration)
 3. The workflow automatically triggers on documentation or code changes
 
-See the GitHub Actions workflow configuration in `.github/workflows/documentation-review-oauth.yml` for setup details.
+See the GitHub Actions workflow configurations in `.github/workflows/docs-*.yml` for setup details.
 
 ## Contributing
 
