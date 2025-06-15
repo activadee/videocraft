@@ -97,16 +97,21 @@ func setupRoutes(
 	v1.GET("/jobs/:job_id/status", jobHandler.GetJobStatus)
 	v1.POST("/jobs/:job_id/cancel", jobHandler.CancelJob)
 
-	// Legacy routes (for backward compatibility with Python version)
-	router.POST("/generate-video", videoHandler.GenerateVideo)
-	router.GET("/download/:video_id", videoHandler.DownloadVideo)
-	router.GET("/status/:video_id", videoHandler.GetVideoStatus)
-	router.GET("/videos", videoHandler.ListVideos)
-	router.DELETE("/videos/:video_id", videoHandler.DeleteVideo)
-	router.GET("/jobs", jobHandler.ListJobs)
-	router.GET("/jobs/:job_id", jobHandler.GetJob)
-	router.GET("/jobs/:job_id/status", jobHandler.GetJobStatus)
-	router.POST("/jobs/:job_id/cancel", jobHandler.CancelJob)
+	// Legacy routes (for backward compatibility with Python version) - also require auth
+	legacyGroup := router.Group("")
+	if cfg.Security.EnableAuth {
+		legacyGroup.Use(middleware.Auth(cfg.Security.APIKey))
+	}
+	
+	legacyGroup.POST("/generate-video", videoHandler.GenerateVideo)
+	legacyGroup.GET("/download/:video_id", videoHandler.DownloadVideo)
+	legacyGroup.GET("/status/:video_id", videoHandler.GetVideoStatus)
+	legacyGroup.GET("/videos", videoHandler.ListVideos)
+	legacyGroup.DELETE("/videos/:video_id", videoHandler.DeleteVideo)
+	legacyGroup.GET("/jobs", jobHandler.ListJobs)
+	legacyGroup.GET("/jobs/:job_id", jobHandler.GetJob)
+	legacyGroup.GET("/jobs/:job_id/status", jobHandler.GetJobStatus)
+	legacyGroup.POST("/jobs/:job_id/cancel", jobHandler.CancelJob)
 
 	// Documentation endpoint
 	router.GET("/", func(c *gin.Context) {
