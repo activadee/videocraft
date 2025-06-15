@@ -271,12 +271,13 @@ subtitles:
       "settings": {
         "font-family": "Custom Font",
         "font-size": 30
-        // Note: word-color, outline-color, position will use global config
       }
     }
   ]
 }
 ```
+
+**Note**: When only some fields are provided, missing fields (word-color, outline-color, position) will use global config values.
 
 ## Validation Rules
 

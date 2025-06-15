@@ -15,6 +15,7 @@ VideoCraft is a high-performance Go-based video generation platform that creates
 - **Word-level timing**: Advanced Whisper AI integration for precise word-by-word subtitle timing
 - **ASS format generation**: Rich subtitle styling with fonts, colors, positioning, and effects
 - **Multiple display modes**: Progressive (word-by-word) and classic (full-line) subtitle styles
+- **JSON configuration**: Per-request subtitle customization with intelligent global config fallback (v2.1+)
 - **Real-time transcription**: Python Whisper daemon with 5-minute idle timeout for efficiency
 
 ### 🔧 Robust Architecture

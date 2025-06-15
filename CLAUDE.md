@@ -433,10 +433,46 @@ type ASSConfig struct {
     OutlineColor string
     OutlineWidth int
     ShadowOffset int
+    
+    // Extended fields for JSON SubtitleSettings (v2.1+)
+    Style        string
+    LineColor    string
+    ShadowColor  string
+    BoxColor     string
 }
 ```
 
 Progressive subtitles create individual events for each word with precise timing, enabling word-by-word highlighting effects.
+
+#### JSON SubtitleSettings Support (v2.1+)
+
+As of v2.1, VideoCraft supports per-request subtitle customization through JSON configuration:
+
+```json
+{
+  "elements": [
+    {
+      "type": "subtitles",
+      "settings": {
+        "style": "progressive",
+        "font-family": "Arial",
+        "font-size": 24,
+        "word-color": "#FFFFFF",
+        "outline-color": "#000000",
+        "position": "center-bottom"
+      }
+    }
+  ]
+}
+```
+
+**Key Features**:
+- **Intelligent Fallback**: Missing JSON fields use global configuration
+- **Full Field Support**: All 11 SubtitleSettings fields supported
+- **Backward Compatibility**: Existing APIs unchanged
+- **Input Validation**: Comprehensive validation for JSON settings
+
+See `docs/subtitle-settings-json-examples.md` for complete usage examples.
 
 ## Python-Go Integration
 
