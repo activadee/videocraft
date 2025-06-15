@@ -222,7 +222,7 @@ security:
 - **Solution**: Add your domain to `allowed_domains` configuration
 - **Debug**: Check server logs for `CORS_ORIGIN_REJECTED` events
 
-#### CSRF Errors  
+#### CSRF Errors
 - **Symptom**: "CSRF token required" errors on POST requests
 - **Solution**: Get token from `/api/v1/csrf-token` and include in headers
 - **Debug**: Check for `CSRF_TOKEN_MISSING` or `CSRF_TOKEN_INVALID` logs
@@ -264,6 +264,6 @@ This middleware implementation helps achieve compliance with:
 
 ### Version Updates
 - Test security middleware with framework updates
-- Validate continued effectiveness after dependency updates  
+- Validate continued effectiveness after dependency updates
 - Benchmark performance impact of security features
 - Update documentation with any configuration changes

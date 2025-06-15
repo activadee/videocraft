@@ -474,7 +474,7 @@ curl -X POST -H "X-CSRF-Token: your-token" \
      http://localhost:3002/api/v1/generate-video
 ```
 
-For detailed security implementation, see: [`internal/api/middleware/SECURITY.md`](middleware/SECURITY.md)
+For detailed security implementation, see: [`middleware/SECURITY.md`](middleware/SECURITY.md)
 
 ### Authentication (`middleware/auth.go`)
 
