@@ -42,9 +42,6 @@ jobs:
           }
           EOF
 
-      - name: Create triage prompt
-        run: EOF
-
       - name: Run Claude Code for Issue Triage
         uses: grll/claude-code-action@v0.0.13
         with:
