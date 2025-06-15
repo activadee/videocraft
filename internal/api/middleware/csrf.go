@@ -213,15 +213,6 @@ func isValidCSRFToken(token, secret string) bool {
 	return hmac.Equal(providedSignature, expectedSignature)
 }
 
-// isHexadecimal checks if a string contains only hexadecimal characters
-func isHexadecimal(s string) bool {
-	for _, r := range s {
-		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
-			return false
-		}
-	}
-	return true
-}
 
 // isSafeMethod checks if the HTTP method is safe (doesn't require CSRF protection)
 func isSafeMethod(method string) bool {
