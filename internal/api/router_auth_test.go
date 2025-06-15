@@ -204,20 +204,23 @@ func TestRouter_LegacyEndpointsRequireAuth(t *testing.T) {
 		router := NewRouter(cfg, services, testLogger)
 
 		// Test legacy endpoints without auth
-		legacyEndpoints := []string{
-			"/generate-video",
-			"/videos",
+		legacyEndpoints := []struct {
+			method string
+			path   string
+		}{
+			{"POST", "/generate-video"},
+			{"GET", "/videos"},
 		}
 
 		for _, endpoint := range legacyEndpoints {
-			req, _ := http.NewRequest(http.MethodGet, endpoint, http.NoBody)
+			req, _ := http.NewRequest(endpoint.method, endpoint.path, http.NoBody)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, req)
 
 			// Legacy endpoints should also require authentication
 			assert.Equal(t, http.StatusUnauthorized, w.Code,
-				"Legacy endpoint %s should require authentication", endpoint)
+				"Legacy endpoint %s %s should require authentication", endpoint.method, endpoint.path)
 		}
 	})
 }

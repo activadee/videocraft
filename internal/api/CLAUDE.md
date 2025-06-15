@@ -15,6 +15,8 @@ internal/api/
 │   └── health.go      # Health and metrics endpoints
 └── middleware/         # HTTP middleware
     ├── auth.go        # Authentication
+    ├── cors.go        # Secure CORS configuration
+    ├── csrf.go        # CSRF protection
     ├── logger.go      # Request logging
     ├── error.go       # Error handling
     └── ratelimit.go   # Rate limiting
@@ -60,7 +62,8 @@ func NewRouter(cfg *config.Config, services *services.Services, logger logger.Lo
     // Global middleware
     router.Use(middleware.Logger(logger))
     router.Use(middleware.Recovery())
-    router.Use(middleware.CORS())
+    router.Use(middleware.SecureCORS(cfg, logger))
+    router.Use(middleware.CSRFProtection(cfg, logger))
     router.Use(middleware.RequestID())
     
     // API versioning
@@ -106,6 +109,14 @@ func registerJobRoutes(rg *gin.RouterGroup, services *services.Services, logger 
         jobs.GET("/:id/status", handler.GetJobStatus)  // GET /api/v1/jobs/:id/status
         jobs.POST("/:id/cancel", handler.CancelJob)    // POST /api/v1/jobs/:id/cancel
     }
+}
+```
+
+#### Security Routes
+```go
+func registerSecurityRoutes(rg *gin.RouterGroup, cfg *config.Config, logger logger.Logger) {
+    // CSRF token endpoint (no auth required for getting token)
+    rg.GET("/csrf-token", middleware.CSRFTokenEndpoint(cfg, logger))
 }
 ```
 
@@ -378,6 +389,92 @@ func (hh *HealthHandler) checkStorageService() string {
 ```
 
 ## Middleware
+
+### Security Middleware
+
+#### Secure CORS (`middleware/cors.go`)
+
+**Critical Security Features:**
+- **Zero Wildcard Policy**: Eliminates `AllowOrigins: ["*"]` vulnerability
+- **Strict Domain Allowlisting**: Only configured domains permitted
+- **Origin Validation Caching**: Thread-safe performance optimization
+- **Suspicious Pattern Detection**: Blocks malicious origins
+- **Comprehensive Security Logging**: Structured audit trail
+
+```go
+func SecureCORS(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
+    // Strict domain allowlisting - NO WILDCARDS
+    corsConfig := cors.Config{
+        AllowOrigins: prepareAllowedOrigins(cfg.Security.AllowedDomains),
+        AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+        AllowHeaders: []string{
+            "Origin", "Content-Type", "Authorization", 
+            "X-Requested-With", "X-CSRF-Token",
+        },
+        AllowCredentials: len(cfg.Security.AllowedDomains) == 1,
+        AllowOriginFunc: func(origin string) bool {
+            return validateOriginWithCache(origin, cfg.Security.AllowedDomains, cache, log)
+        },
+    }
+    return cors.New(corsConfig)
+}
+```
+
+**Configuration:**
+```bash
+# Required for production
+export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="yourdomain.com,api.yourdomain.com"
+```
+
+#### CSRF Protection (`middleware/csrf.go`)
+
+**Key Security Features:**
+- **Token-Based Validation**: Cryptographically secure tokens
+- **State-Change Protection**: POST/PUT/DELETE require tokens
+- **Enhanced Token Validation**: Format validation prevents injection
+- **Safe Method Exemption**: GET/HEAD/OPTIONS bypass validation
+
+```go
+func CSRFProtection(cfg *config.Config, log logger.Logger) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // Skip CSRF for safe methods
+        if isSafeMethod(c.Request.Method) {
+            c.Next()
+            return
+        }
+
+        // Validate CSRF token for state-changing requests
+        token := c.GetHeader("X-CSRF-Token")
+        if !isValidCSRFToken(token, cfg.Security.CSRFSecret) {
+            log.WithFields(map[string]interface{}{
+                "violation_type": "CSRF_TOKEN_INVALID",
+                "threat_level":   "HIGH",
+            }).Error("CSRF_SECURITY_VIOLATION")
+            
+            c.JSON(http.StatusForbidden, gin.H{
+                "error": "Invalid CSRF token",
+                "code":  "CSRF_TOKEN_INVALID",
+            })
+            c.Abort()
+            return
+        }
+        c.Next()
+    }
+}
+```
+
+**Usage:**
+```bash
+# Get CSRF token
+curl http://localhost:3002/api/v1/csrf-token
+
+# Include token in requests
+curl -X POST -H "X-CSRF-Token: your-token" \
+     -H "Content-Type: application/json" \
+     http://localhost:3002/api/v1/generate-video
+```
+
+For detailed security implementation, see: [`middleware/SECURITY.md`](middleware/SECURITY.md)
 
 ### Authentication (`middleware/auth.go`)
 
@@ -746,32 +843,52 @@ rate_limiting:
   requests_per_second: 10
   burst_size: 20
 
+security:
+  allowed_domains:
+    - "yourdomain.com"
+    - "api.yourdomain.com"
+  enable_csrf: true
+  csrf_secret: "${VIDEOCRAFT_SECURITY_CSRF_SECRET}"
+  enable_auth: true
+  rate_limit: 100
+
 cors:
-  enabled: true
-  allowed_origins: ["*"]
-  allowed_methods: ["GET", "POST", "DELETE"]
-  allowed_headers: ["Authorization", "Content-Type"]
+  # SECURITY: NO WILDCARDS ALLOWED
+  # Domain allowlisting configured via security.allowed_domains
 ```
 
 ## Security Considerations
 
+### Critical Security Features
+- **CORS Wildcard Elimination**: Complete removal of `AllowOrigins: ["*"]`
+- **Strict Domain Allowlisting**: Only configured domains permitted
+- **CSRF Protection**: Token-based validation for state-changing requests
+- **Suspicious Pattern Detection**: Automatic blocking of malicious origins
+- **Comprehensive Security Logging**: Structured audit trail with threat levels
+
 ### Input Validation
 - JSON schema validation for all requests
-- File path traversal prevention
+- File path traversal prevention  
 - URL validation for external resources
 - Request size limits
+- CSRF token format validation
+- Origin pattern validation
 
 ### Authentication & Authorization
 - Bearer token authentication
 - API key rotation support
 - Rate limiting per client IP
-- CORS configuration
+- Secure CORS configuration (NO WILDCARDS)
+- CSRF token validation
+- Origin-based access control
 
 ### Data Protection
 - No sensitive data in logs
 - Secure file handling
 - Temporary file cleanup
 - Error message sanitization
+- Secure CSRF token generation
+- Encrypted secrets management
 
 ## Performance Optimization
 

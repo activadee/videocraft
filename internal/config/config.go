@@ -103,6 +103,8 @@ type SecurityConfig struct {
 	RateLimit      int      `mapstructure:"rate_limit"`
 	EnableAuth     bool     `mapstructure:"enable_auth"`
 	AllowedDomains []string `mapstructure:"allowed_domains"`
+	EnableCSRF     bool     `mapstructure:"enable_csrf"`
+	CSRFSecret     string   `mapstructure:"csrf_secret"`
 }
 
 func Load() (*Config, error) {
@@ -143,6 +145,17 @@ func Load() (*Config, error) {
 			return nil, fmt.Errorf("failed to generate API key: %w", err)
 		}
 		config.Security.APIKey = generatedKey
+	}
+
+	// Auto-generate strong CSRF secret if CSRF is enabled but none supplied
+	if config.Security.EnableCSRF &&
+		config.Security.CSRFSecret == "" &&
+		!viper.IsSet("security.csrf_secret") {
+		secret, err := generateSecureAPIKey() // 256-bit hex == 64 chars
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate CSRF secret: %w", err)
+		}
+		config.Security.CSRFSecret = secret
 	}
 
 	return &config, nil
@@ -203,6 +216,8 @@ func setDefaults() {
 	viper.SetDefault("security.rate_limit", 100)
 	viper.SetDefault("security.enable_auth", true)
 	viper.SetDefault("security.allowed_domains", []string{})
+	viper.SetDefault("security.enable_csrf", false)
+	viper.SetDefault("security.csrf_secret", "CHANGE_ME_64_CHAR_MINIMUM_ENTROPY_SECRET_FOR_CSRF_PROTECTION_REPLACE")
 }
 
 // generateSecureAPIKey generates a cryptographically secure API key

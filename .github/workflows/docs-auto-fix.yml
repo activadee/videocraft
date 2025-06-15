@@ -1,0 +1,242 @@
+name: Auto-Fix Documentation (PR)
+
+# Automated documentation improvement workflow for pull requests
+# Analyzes diff against main and commits fixes with skip CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**.md"
+      - "docs/**"
+      - "CLAUDE.md"
+      - "**/CLAUDE.md"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "internal/**/*.go"
+      - "pkg/**/*.go"
+      - "cmd/**/*.go"
+      - "scripts/**/*.py"
+  workflow_dispatch: # Allow manual triggers
+    inputs:
+      pr_number:
+        description: "PR number to process"
+        required: true
+        type: number
+
+# Cancel any in-progress runs when new commits are pushed
+concurrency:
+  group: auto-fix-docs-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+
+jobs:
+  auto-fix-documentation:
+    runs-on: ubuntu-latest
+    if: |
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.pull_request.title, '[skip ci]') &&
+      github.actor != 'auto-doc-bot[bot]'
+
+    steps:
+      - name: Generate GitHub App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - name: Configure Git as Bot
+        run: |
+          git config --global user.email "auto-doc-bot[bot]@users.noreply.github.com"
+          git config --global user.name "auto-doc-bot[bot]"
+          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git
+
+      - name: Analyze changes against main
+        id: analyze-diff
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title || '' }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+        run: |
+          git fetch origin main:main
+          CHANGED_FILES=$(git diff --name-only main..HEAD | grep -E '\.(md|go|py)$' || echo "")
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "should_process=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "should_process=true" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" > /tmp/changed_files.txt
+
+          DOC_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(md)$' || echo "")
+          CODE_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(go|py)$' || echo "")
+
+          [ -n "$DOC_FILES" ] && echo "doc_changes=true" >> $GITHUB_OUTPUT || echo "doc_changes=false" >> $GITHUB_OUTPUT
+          [ -n "$CODE_FILES" ] && echo "code_changes=true" >> $GITHUB_OUTPUT || echo "code_changes=false" >> $GITHUB_OUTPUT
+
+          COMMIT_MESSAGES=$(git log main..HEAD --pretty=format:"%s %b" 2>/dev/null || echo "")
+
+          if echo "$COMMIT_MESSAGES $PR_TITLE $PR_BODY" | grep -qiE "(security|api|breaking|critical)"; then
+            echo "critical_change=true" >> $GITHUB_OUTPUT
+          else
+            echo "critical_change=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Review and Fix Documentation
+        if: steps.analyze-diff.outputs.should_process == 'true'
+        uses: grll/claude-code-action@v0.0.19-oauth
+        env:
+          GITHUB_ACTOR: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          use_oauth: true
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
+          claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
+          claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
+          timeout_minutes: "30"
+          model: "claude-sonnet-4-20250514"
+          direct_prompt: |
+            🤖 **VideoCraft PR Documentation Auto-Fix**
+
+            I'm analyzing PR #${{ github.event.pull_request.number }} and need to automatically fix documentation issues.
+
+            ## 📊 **PR Context**
+            - **Branch**: ${{ github.event.pull_request.head.ref }}
+            - **Author**: ${{ github.event.pull_request.user.login }}
+            - **Critical Change**: ${{ steps.analyze-diff.outputs.critical_change }}
+
+            ## 🔍 **Changes Analysis**
+            **Documentation files changed**: ${{ steps.analyze-diff.outputs.doc_changes }}
+            **Code files changed**: ${{ steps.analyze-diff.outputs.code_changes }}
+
+            Changed files:
+            ```
+            $(cat /tmp/changed_files.txt)
+            ```
+
+            ## 🎯 **Auto-Fix Tasks** (Execute immediately)
+            1. Fix markdown syntax errors
+            2. Add missing code block language tags
+            3. Correct heading hierarchy
+            4. Fix broken internal links
+            5. Standardize formatting
+            6. Fix spelling and grammar
+            7. Update outdated examples
+            8. Sync documentation with code changes
+
+            ## 📝 **Instructions**
+            **IMPORTANT: Edit files directly, don't just suggest changes.**
+            1. Only modify files that changed in this PR
+            2. Make safe, obvious improvements
+            3. Update docs to match code changes
+            4. Don't modify workflow files
+
+      - name: Check and Commit Changes
+        id: commit-changes
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          git add -A
+
+          CRITICAL_FLAG="${{ steps.analyze-diff.outputs.critical_change == 'true' && '🚨 CRITICAL: ' || '' }}"
+
+          git commit -m "${CRITICAL_FLAG}docs: auto-fix documentation for PR #${{ github.event.pull_request.number }} [skip ci]
+
+          🤖 Automated documentation improvements:
+          - Fixed markdown formatting and syntax
+          - Corrected spelling and grammar
+          - Updated documentation to match code changes
+          - Standardized code blocks and formatting
+          - Improved consistency across files
+
+          Generated by auto-doc-bot[bot]"
+
+          git push origin HEAD:$PR_HEAD_REF
+
+      - name: Comment on PR
+        if: steps.commit-changes.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const isCritical = '${{ steps.analyze-diff.outputs.critical_change }}' === 'true';
+
+            const comment = `## 🤖 Documentation Auto-Fix Applied
+
+            The documentation bot has automatically improved the documentation in this PR.
+
+            ### ✅ Fixes Applied:
+            - Fixed markdown formatting and syntax issues
+            - Corrected spelling and grammar errors
+            - Updated documentation to match code changes
+            - Standardized code highlighting
+            - Improved cross-references and consistency
+
+            ### 🔍 Review Notes:
+            ${isCritical ? '⚠️ **Critical changes detected** - Please manually review the documentation updates for accuracy.' : '✅ Standard documentation improvements applied automatically.'}
+
+            These changes have been committed with \`[skip ci]\` to prevent workflow loops.
+
+            *Generated by auto-doc-bot[bot]*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.pull_request.number }},
+              body: comment
+            });
+
+            if (isCritical) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: ${{ github.event.pull_request.number }},
+                labels: ['documentation', 'critical-review']
+              });
+            }
+
+      - name: Set PR Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const hasChanges = '${{ steps.commit-changes.outputs.has_changes }}' === 'true';
+            const isCritical = '${{ steps.analyze-diff.outputs.critical_change }}' === 'true';
+
+            const state = 'success';
+            const description = hasChanges
+              ? (isCritical ? 'Documentation updated - critical review required' : 'Documentation auto-fix completed')
+              : 'No documentation fixes needed';
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: state,
+              description: description,
+              context: 'documentation/auto-fix'
+            });

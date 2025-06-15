@@ -1,9 +1,6 @@
 package api
 
 import (
-	"time"
-
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/activadee/videocraft/internal/api/handlers"
@@ -32,7 +29,7 @@ func NewRouter(cfg *config.Config, services *services.Services, log logger.Logge
 	jobHandler := handlers.NewJobHandler(cfg, services, log)
 
 	// Setup routes
-	setupRoutes(router, healthHandler, videoHandler, jobHandler)
+	setupRoutes(router, cfg, log, healthHandler, videoHandler, jobHandler)
 
 	return router
 }
@@ -44,15 +41,11 @@ func setupMiddleware(router *gin.Engine, cfg *config.Config, log logger.Logger) 
 	// Custom logging middleware
 	router.Use(middleware.Logger(log))
 
-	// CORS middleware
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, // Configure appropriately for production
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	// Secure CORS middleware - NO WILDCARDS
+	router.Use(middleware.SecureCORS(cfg, log))
+
+	// CSRF protection middleware
+	router.Use(middleware.CSRFProtection(cfg, log))
 
 	// Error handling middleware
 	router.Use(middleware.ErrorHandler(log))
@@ -62,14 +55,13 @@ func setupMiddleware(router *gin.Engine, cfg *config.Config, log logger.Logger) 
 		router.Use(middleware.RateLimit(cfg.Security.RateLimit))
 	}
 
-	// Authentication middleware (if enabled)
-	if cfg.Security.EnableAuth {
-		router.Use(middleware.Auth(cfg.Security.APIKey))
-	}
+	// Authentication middleware will be applied per route group, not globally
 }
 
 func setupRoutes(
 	router *gin.Engine,
+	cfg *config.Config,
+	log logger.Logger,
 	healthHandler *handlers.HealthHandler,
 	videoHandler *handlers.VideoHandler,
 	jobHandler *handlers.JobHandler,
@@ -81,8 +73,15 @@ func setupRoutes(
 	router.GET("/live", healthHandler.Live)
 	router.GET("/metrics", healthHandler.Metrics)
 
-	// API v1 routes
+	// CSRF token endpoint (no auth required) - must be outside authenticated groups
+	router.GET("/api/v1/csrf-token", middleware.CSRFTokenEndpoint(cfg, log))
+
+	// API v1 routes with authentication
 	v1 := router.Group("/api/v1")
+	if cfg.Security.EnableAuth {
+		v1.Use(middleware.Auth(cfg.Security.APIKey))
+	}
+
 	// Video generation
 	v1.POST("/generate-video", videoHandler.GenerateVideo)
 
@@ -98,16 +97,21 @@ func setupRoutes(
 	v1.GET("/jobs/:job_id/status", jobHandler.GetJobStatus)
 	v1.POST("/jobs/:job_id/cancel", jobHandler.CancelJob)
 
-	// Legacy routes (for backward compatibility with Python version)
-	router.POST("/generate-video", videoHandler.GenerateVideo)
-	router.GET("/download/:video_id", videoHandler.DownloadVideo)
-	router.GET("/status/:video_id", videoHandler.GetVideoStatus)
-	router.GET("/videos", videoHandler.ListVideos)
-	router.DELETE("/videos/:video_id", videoHandler.DeleteVideo)
-	router.GET("/jobs", jobHandler.ListJobs)
-	router.GET("/jobs/:job_id", jobHandler.GetJob)
-	router.GET("/jobs/:job_id/status", jobHandler.GetJobStatus)
-	router.POST("/jobs/:job_id/cancel", jobHandler.CancelJob)
+	// Legacy routes (for backward compatibility with Python version) - also require auth
+	legacyGroup := router.Group("")
+	if cfg.Security.EnableAuth {
+		legacyGroup.Use(middleware.Auth(cfg.Security.APIKey))
+	}
+	
+	legacyGroup.POST("/generate-video", videoHandler.GenerateVideo)
+	legacyGroup.GET("/download/:video_id", videoHandler.DownloadVideo)
+	legacyGroup.GET("/status/:video_id", videoHandler.GetVideoStatus)
+	legacyGroup.GET("/videos", videoHandler.ListVideos)
+	legacyGroup.DELETE("/videos/:video_id", videoHandler.DeleteVideo)
+	legacyGroup.GET("/jobs", jobHandler.ListJobs)
+	legacyGroup.GET("/jobs/:job_id", jobHandler.GetJob)
+	legacyGroup.GET("/jobs/:job_id/status", jobHandler.GetJobStatus)
+	legacyGroup.POST("/jobs/:job_id/cancel", jobHandler.CancelJob)
 
 	// Documentation endpoint
 	router.GET("/", func(c *gin.Context) {
