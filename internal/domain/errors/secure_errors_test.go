@@ -19,42 +19,42 @@ func TestSecureErrorHandling_SanitizeError(t *testing.T) {
 		{
 			name:           "should sanitize stack trace from FFmpeg error",
 			err:            FFmpegFailed(errors.New("exit status 1: ffmpeg: error while opening input file '/etc/passwd'")),
-			expectedClient: "Video processing failed",
+			expectedClient: "Video processing failed. Please check your input files and try again.",
 			expectedServer: "FFmpeg execution failed: exit status 1: ffmpeg: error while opening input file '/etc/passwd'",
 			expectedCode:   ErrCodeFFmpegFailed,
 		},
 		{
 			name:           "should sanitize file path from file not found error",
 			err:            FileNotFound("/home/user/.ssh/id_rsa"),
-			expectedClient: "File not found",
+			expectedClient: "The requested file could not be found. Please verify the file exists.",
 			expectedServer: "File not found: /home/user/.ssh/id_rsa",
 			expectedCode:   ErrCodeFileNotFound,
 		},
 		{
 			name:           "should sanitize download URL from download error",
 			err:            DownloadFailed("http://internal.server/admin/secrets", errors.New("connection refused")),
-			expectedClient: "Download failed",
+			expectedClient: "Failed to download the specified resource. Please check the URL and try again.",
 			expectedServer: "Failed to download from http://internal.server/admin/secrets: connection refused",
 			expectedCode:   ErrCodeDownloadFailed,
 		},
 		{
 			name:           "should sanitize transcription error details",
 			err:            TranscriptionFailed(errors.New("whisper model failed: /internal/models/whisper.bin not found")),
-			expectedClient: "Transcription failed",
+			expectedClient: "Audio transcription failed. Please ensure the audio file is valid.",
 			expectedServer: "Audio transcription failed: whisper model failed: /internal/models/whisper.bin not found",
 			expectedCode:   ErrCodeTranscriptionFailed,
 		},
 		{
 			name:           "should sanitize storage error with sensitive paths",
 			err:            StorageFailed(errors.New("permission denied: /var/lib/mysql/data")),
-			expectedClient: "Storage operation failed",
+			expectedClient: "Storage operation failed. Please try again later.",
 			expectedServer: "Storage operation failed: permission denied: /var/lib/mysql/data",
 			expectedCode:   ErrCodeStorageFailed,
 		},
 		{
 			name:           "should sanitize internal error with stack trace",
 			err:            InternalError(errors.New("database connection failed: mysql://user:password@localhost/db")),
-			expectedClient: "Internal server error occurred",
+			expectedClient: "An internal error occurred. Please try again later or contact support.",
 			expectedServer: "Internal server error: database connection failed: mysql://user:password@localhost/db",
 			expectedCode:   ErrCodeInternalError,
 		},
@@ -92,7 +92,7 @@ func TestSecureErrorHandling_NoStackTraceInClientResponse(t *testing.T) {
 	assert.NotContains(t, clientMsg, "runtime error")
 	assert.NotContains(t, clientMsg, "/app/internal")
 	assert.NotContains(t, clientMsg, "panic:")
-	assert.Equal(t, "Internal server error occurred", clientMsg)
+	assert.Equal(t, "An internal error occurred. Please try again later or contact support.", clientMsg)
 }
 
 func TestSecureErrorHandling_NoSensitivePathsInClientResponse(t *testing.T) {

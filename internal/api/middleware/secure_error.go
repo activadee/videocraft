@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -115,7 +116,7 @@ func logSecuritySensitiveError(err error, requestContext map[string]interface{},
 	// Get security event log entry
 	securityLogEntry := domainErrors.LogSecurityEvent(err)
 	
-	// Add request context
+	// Add request context efficiently
 	for key, value := range requestContext {
 		securityLogEntry[key] = value
 	}
@@ -124,11 +125,70 @@ func logSecuritySensitiveError(err error, requestContext map[string]interface{},
 	securityLogEntry["server_error_details"] = domainErrors.GetServerDetails(err)
 	
 	// Add stack trace if available (server-side only)
+	// Limit stack trace size to prevent log bloat
 	if stack := debug.Stack(); stack != nil {
-		securityLogEntry["stack_trace"] = string(stack)
+		stackStr := string(stack)
+		if len(stackStr) > 2048 { // Limit to 2KB
+			stackStr = stackStr[:2048] + "...[truncated]"
+		}
+		securityLogEntry["stack_trace"] = stackStr
 	}
 	
+	// Add threat assessment
+	securityLogEntry["threat_level"] = assessThreatLevel(err)
+	securityLogEntry["recommended_action"] = getRecommendedAction(err)
+	
 	log.WithFields(securityLogEntry).Error("SECURITY_VIOLATION: Security-sensitive error detected")
+}
+
+// assessThreatLevel provides automated threat level assessment
+func assessThreatLevel(err error) string {
+	if vpe, ok := err.(*domainErrors.VideoProcessingError); ok {
+		message := vpe.Message
+		
+		// High threat indicators
+		highThreatPatterns := []string{
+			"/etc/passwd", "/etc/shadow", ".ssh/id_rsa", "/root/",
+			"admin", "secret", "password", "credential",
+		}
+		
+		for _, pattern := range highThreatPatterns {
+			if strings.Contains(strings.ToLower(message), pattern) {
+				return "HIGH"
+			}
+		}
+		
+		// Medium threat indicators
+		mediumThreatPatterns := []string{
+			"/etc/", "/var/", "localhost:", "internal.",
+		}
+		
+		for _, pattern := range mediumThreatPatterns {
+			if strings.Contains(strings.ToLower(message), pattern) {
+				return "MEDIUM"
+			}
+		}
+		
+		return "LOW"
+	}
+	
+	return "UNKNOWN"
+}
+
+// getRecommendedAction provides automated response recommendations
+func getRecommendedAction(err error) string {
+	threatLevel := assessThreatLevel(err)
+	
+	switch threatLevel {
+	case "HIGH":
+		return "IMMEDIATE_REVIEW_REQUIRED - Check for potential intrusion attempts"
+	case "MEDIUM":
+		return "MONITOR_CLOSELY - Review access patterns and log retention"
+	case "LOW":
+		return "LOG_AND_MONITOR - Standard security logging"
+	default:
+		return "INVESTIGATE - Unknown threat pattern detected"
+	}
 }
 
 // createSecureErrorResponse creates a sanitized error response for clients
@@ -136,18 +196,61 @@ func createSecureErrorResponse(err error, c *gin.Context) map[string]interface{}
 	// Start with basic secure response
 	response := domainErrors.ToClientResponse(err)
 	
-	// Add request metadata (safe information only)
-	response["request_id"] = c.GetHeader("X-Request-ID")
-	response["timestamp"] = time.Now().Format(time.RFC3339)
+	// Generate or get request ID for tracking
+	requestID := c.GetHeader("X-Request-ID")
+	if requestID == "" {
+		requestID = generateRequestID()
+	}
 	
-	// Ensure no sensitive fields are included
-	delete(response, "details")
-	delete(response, "original_error")
-	delete(response, "stack_trace")
-	delete(response, "internal_message")
-	delete(response, "server_details")
+	// Add safe metadata for client debugging
+	response["request_id"] = requestID
+	response["timestamp"] = time.Now().Format(time.RFC3339)
+	response["success"] = false
+	
+	// Add helpful links for common errors
+	if errorCode, ok := response["code"].(string); ok {
+		response["help_url"] = generateHelpURL(errorCode)
+	}
+	
+	// Ensure no sensitive fields are included (defensive programming)
+	sensitiveFields := []string{
+		"details", "original_error", "stack_trace", "internal_message",
+		"server_details", "file_path", "url", "credentials", "password",
+		"secret", "token", "key", "session", "cookie",
+	}
+	
+	for _, field := range sensitiveFields {
+		delete(response, field)
+	}
 	
 	return response
+}
+
+// generateRequestID creates a simple request ID for tracking
+func generateRequestID() string {
+	return fmt.Sprintf("req_%d", time.Now().UnixNano())
+}
+
+// generateHelpURL provides helpful documentation links for error codes
+func generateHelpURL(errorCode string) string {
+	baseURL := "https://docs.videocraft.io/errors/"
+	
+	switch errorCode {
+	case domainErrors.ErrCodeFFmpegFailed:
+		return baseURL + "video-processing"
+	case domainErrors.ErrCodeFileNotFound:
+		return baseURL + "file-not-found"
+	case domainErrors.ErrCodeDownloadFailed:
+		return baseURL + "download-issues"
+	case domainErrors.ErrCodeTranscriptionFailed:
+		return baseURL + "transcription-issues"
+	case domainErrors.ErrCodeInvalidInput:
+		return baseURL + "input-validation"
+	case domainErrors.ErrCodeTimeout:
+		return baseURL + "timeouts"
+	default:
+		return baseURL + "general"
+	}
 }
 
 // getStatusCodeFromError determines appropriate HTTP status code
