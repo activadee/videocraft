@@ -103,6 +103,8 @@ type SecurityConfig struct {
 	RateLimit      int      `mapstructure:"rate_limit"`
 	EnableAuth     bool     `mapstructure:"enable_auth"`
 	AllowedDomains []string `mapstructure:"allowed_domains"`
+	EnableCSRF     bool     `mapstructure:"enable_csrf"`
+	CSRFSecret     string   `mapstructure:"csrf_secret"`
 }
 
 func Load() (*Config, error) {
@@ -203,6 +205,8 @@ func setDefaults() {
 	viper.SetDefault("security.rate_limit", 100)
 	viper.SetDefault("security.enable_auth", true)
 	viper.SetDefault("security.allowed_domains", []string{})
+	viper.SetDefault("security.enable_csrf", false)
+	viper.SetDefault("security.csrf_secret", "")
 }
 
 // generateSecureAPIKey generates a cryptographically secure API key
