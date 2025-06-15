@@ -119,7 +119,9 @@ jobs:
       - name: Review and Fix Documentation
         if: steps.analyze-diff.outputs.doc_changes == 'true' || steps.analyze-diff.outputs.code_changes == 'true'
         id: claude-review
-        uses: grll/claude-code-action@v0.0.13
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+        uses: grll/claude-code-action@v0.0.19-oauth
         with:
           use_oauth: true
           github_token: ${{ steps.app-token.outputs.token }}
@@ -346,7 +348,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Critical Documentation Sync
-        uses: grll/claude-code-action@v0.0.13
+        uses: grll/claude-code-action@v0.0.19-oauth
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
         with:
           github_token: ${{ steps.app-token-critical.outputs.token }}
           use_oauth: true
