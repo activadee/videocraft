@@ -22,6 +22,7 @@ VideoCraft is a high-performance Go-based video generation platform that creates
 - **Async job processing**: Background video generation with progress tracking
 - **RESTful API**: Comprehensive HTTP API with authentication and rate limiting
 - **Security-first design**: Multi-layered security validation and input sanitization
+- **Secure error handling**: Advanced error sanitization preventing information disclosure
 - **Container-ready**: Docker and Kubernetes deployment support
 - **AI-powered documentation**: Automated documentation review with Claude AI integration
 
@@ -178,13 +179,14 @@ graph TB
 
 ### Core Components
 
-- **HTTP API Layer**: RESTful endpoints with Gin framework
+- **HTTP API Layer**: RESTful endpoints with Gin framework and secure error handling
 - **Job Service**: Async job processing and queue management  
 - **Audio Service**: Audio file analysis and duration calculation
 - **Transcription Service**: Go-Python daemon communication for Whisper AI
 - **Subtitle Service**: ASS subtitle generation with progressive timing
 - **FFmpeg Service**: Video encoding with command injection prevention
 - **Storage Service**: File management and cleanup
+- **Security Layer**: Comprehensive error sanitization and threat assessment
 
 ## Progressive Subtitles Deep Dive
 
