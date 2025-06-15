@@ -2,7 +2,7 @@
 
 ## 🚨 CRITICAL SECURITY UPDATE
 
-**🔒 Breaking Changes in v1.1.0 - Security-First Implementation**
+### 🔒 Breaking Changes in v1.1.0 - Security-First Implementation
 
 This version introduces **mandatory security enhancements** that require configuration updates:
 
@@ -568,7 +568,7 @@ docker pull yourregistry/videocraft:v1.0.x
 
 ### 🔒 Security Issues (v1.1.0+)
 
-**CORS Errors - "Access to fetch blocked by CORS policy"**
+#### CORS Errors - "Access to fetch blocked by CORS policy"
 ```bash
 # Symptom: Browser console shows CORS policy errors
 # Solution: Add your domain to the allowlist
@@ -578,7 +578,7 @@ export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="yourdomain.com,api.yourdomain.com"
 docker-compose logs videocraft | grep "CORS_ORIGIN_REJECTED"
 ```
 
-**CSRF Token Errors - "CSRF token required"**
+#### CSRF Token Errors - "CSRF token required"
 ```bash
 # Symptom: POST/PUT/DELETE requests return 403 with "CSRF token required"
 # Solution: Get CSRF token and include in headers
@@ -589,7 +589,7 @@ curl -X POST -H "X-CSRF-Token: $CSRF_TOKEN" http://localhost:3002/api/v1/generat
 docker-compose logs videocraft | grep "CSRF_SECURITY_VIOLATION"
 ```
 
-**Authentication Errors - "Authorization header required"**
+#### Authentication Errors - "Authorization header required"
 ```bash
 # Symptom: 401 Unauthorized responses
 # Solution: Include API key in Authorization header
@@ -599,7 +599,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3002/api/v1/videos
 docker-compose logs videocraft | grep "Generated API key"
 ```
 
-**Cross-Origin Requests Blocked**
+#### Cross-Origin Requests Blocked
 ```bash
 # Symptom: All cross-origin requests return 403
 # Solution: Configure allowed domains environment variable
@@ -665,7 +665,7 @@ VideoCraft includes an AI-powered documentation review system using Claude AI to
 2. Or install the Claude GitHub app (for OAuth integration)
 3. The workflow automatically triggers on documentation or code changes
 
-See the GitHub Actions workflow configurations in `.github/workflows/docs-*.yml` for setup details.
+See the GitHub Actions workflow configurations in `.github/workflows/docs-auto-fix.yml`, `.github/workflows/docs-manual-review.yml`, and `.github/workflows/docs-scheduled-review.yml` for setup details.
 
 ## Contributing
 
