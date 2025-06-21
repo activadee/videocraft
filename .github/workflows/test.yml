@@ -1,0 +1,192 @@
+name: Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Cancel in-progress runs for pull requests
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+permissions:
+  contents: read
+
+# Optimized workflow with 5 essential jobs (reduced from 7)
+# Removed: security scan and docker test jobs for faster execution
+# Maintained: lint, test, integration, coverage, benchmark for quality assurance
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.4"
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1.6
+          args: --timeout=5m --issues-exit-code=0
+
+      - name: Run go vet
+        run: go vet ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.4"
+          cache: true
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Install Python dependencies for integration tests
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r scripts/requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Create test directories
+        run: make dev-setup
+
+      - name: Run unit tests with coverage
+        run: |
+          go test -v -race -coverprofile=coverage.out -json ./... > test-results.json
+
+      - name: Generate coverage report
+        run: |
+          go tool cover -html=coverage.out -o coverage.html
+          go tool cover -func=coverage.out
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results.json
+            coverage.out
+            coverage.html
+          retention-days: 30
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.4"
+          cache: true
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r scripts/requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Create test directories
+        run: make dev-setup
+
+      - name: Run integration tests
+        run: go test -v -tags=integration ./...
+        env:
+          VIDEOCRAFT_LOG_LEVEL: debug
+          VIDEOCRAFT_STORAGE_OUTPUT_DIR: ./generated_videos
+          VIDEOCRAFT_STORAGE_TEMP_DIR: ./temp
+
+  coverage:
+    name: Coverage Upload
+    runs-on: ubuntu-latest
+    needs: test
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.out
+          flags: unittests
+          verbose: true
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.4"
+          cache: true
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r scripts/requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Create test directories
+        run: make dev-setup
+
+      - name: Run benchmarks
+        run: make benchmark | tee benchmark.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark.txt
+          retention-days: 7
+

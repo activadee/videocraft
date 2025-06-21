@@ -1,0 +1,208 @@
+name: Auto-Update Documentation
+
+# Update documentation when code changes, triggered by labels
+# Reuses existing comments and cleans up labels when done
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-update-docs:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      (
+        github.event_name == 'pull_request' &&
+        (
+          contains(github.event.label.name, 'docs-update') ||
+          contains(github.event.label.name, 'sync-docs') ||
+          contains(github.event.label.name, 'update-docs')
+        )
+      )
+
+    steps:
+      - name: Extract PR info (for pull_request)
+        if: github.event_name == 'pull_request'
+        id: pr-info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('pr_head_ref', pr.head.ref);
+            core.setOutput('pr_base_ref', pr.base.ref);
+      - name: Generate GitHub App Token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Clean up previous Claude comments
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const pr_number = ${{ steps.pr-info.outputs.pr_number }};
+            
+            // Find and delete any existing Claude comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr_number
+            });
+
+            const claudeComments = comments.filter(comment => 
+              comment.user.login === 'auto-doc-bot[bot]'
+            );
+
+            for (const comment of claudeComments) {
+              try {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id
+                });
+                console.log(`Deleted previous Claude comment: ${comment.id}`);
+              } catch (error) {
+                console.log(`Could not delete comment ${comment.id}: ${error.message}`);
+              }
+            }
+
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && steps.pr-info.outputs.pr_head_ref || 'main' }}
+
+      - name: Configure Git as Bot
+        run: |
+          git config --global user.email "auto-doc-bot[bot]@users.noreply.github.com"
+          git config --global user.name "auto-doc-bot[bot]"
+      - name: Analyze Code Changes
+        id: analyze-changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # For PR labels, compare PR branch with base branch
+            git fetch origin ${{ steps.pr-info.outputs.pr_base_ref }}:base_branch
+            CHANGED_CODE_FILES=$(git diff --name-only base_branch..HEAD | grep -E '\.(go|py|js|ts)$' || echo "")
+            BASE_COMPARISON="base_branch"
+          else
+            # For push events, compare with previous commit
+            CHANGED_CODE_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E '\.(go|py|js|ts)$' || echo "")
+            BASE_COMPARISON="HEAD~1"
+          fi
+          
+          if [ -z "$CHANGED_CODE_FILES" ]; then
+            echo "should_process=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "should_process=true" >> $GITHUB_OUTPUT
+          echo "$CHANGED_CODE_FILES" > /tmp/changed_code_files.txt
+          
+          # Find all documentation files
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" > /tmp/doc_files.txt
+          
+          # Get the actual diff content for changed files
+          git diff $BASE_COMPARISON HEAD -- $CHANGED_CODE_FILES > /tmp/code_diff.txt
+
+      - name: Update Documentation
+        if: steps.analyze-changes.outputs.should_process == 'true'
+        uses: grll/claude-code-action@v0.0.19-oauth
+        env:
+          GITHUB_ACTOR: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          use_oauth: true
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
+          claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
+          claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
+          timeout_minutes: "30"
+          model: "claude-sonnet-4-20250514"
+          direct_prompt: |
+            🤖 **Documentation Sync with Code Changes**
+            
+            **Trigger**: ${{ github.event_name == 'pull_request' && format('Label applied to PR #{0}', steps.pr-info.outputs.pr_number) || 'Push to main' }}
+
+            ## 📊 **Code Changes Detected**
+            Changed code files:
+            ```
+            $(cat /tmp/changed_code_files.txt)
+            ```
+
+            ## 🔍 **Code Diff**
+            ```diff
+            $(cat /tmp/code_diff.txt)
+            ```
+
+            ## 📋 **Available Documentation Files**
+            ```
+            $(cat /tmp/doc_files.txt)
+            ```
+
+            ## 🎯 **Update Tasks**
+            Based on the code changes above, update the relevant documentation files to keep them in sync:
+
+            1. **API Documentation**: Update any API docs (README.md, claude.md files) if function signatures, endpoints, or interfaces changed
+            2. **Usage Examples**: Update code examples in documentation that may be affected by the changes
+            3. **Configuration**: Update config documentation if new options were added or changed
+            4. **Installation/Setup**: Update setup docs if dependencies or requirements changed
+            5. **Feature Documentation**: Update feature descriptions if functionality was added/modified/removed
+            6. **Breaking Changes**: Document any breaking changes clearly
+
+            ## 📝 **Instructions**
+            **IMPORTANT: Only edit documentation files that need updates based on the code changes.**
+            - Compare the code diff with existing documentation
+            - Update outdated information to match the new code
+            - Add documentation for new features/functions
+            - Remove documentation for deleted code
+            - Keep documentation accurate and up-to-date
+            - Don't modify files that don't need changes
+            - If no changes are needed, simply return "No documentation updates required."
+            - If you make changes, ensure they are clear and concise
+            **IMPORTANT: ALWAYS Commit with [skip ci] to avoid triggering CI builds unnecessarily.**
+            - ensure following commit message format:
+            - commit message: "docs: Update documentation for code changes [skip ci]"
+            - commit body:  
+            ``` 🤖 Updated documentation (triggered by label in PR #${{ steps.pr-info.outputs.pr_number }}):
+            - Synced API documentation with code modifications
+            - Updated examples and usage instructions
+            - Maintained accuracy between code and docs
+            
+            Code files changed:
+            $(cat /tmp/changed_code_files.txt | sed 's/^/- /')  
+            ```
+
+      - name: Remove Trigger Label
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const labelName = '${{ github.event.label.name }}';
+            const pr_number = ${{ steps.pr-info.outputs.pr_number }};
+            
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr_number,
+                name: labelName
+              });
+              console.log(`Removed label: ${labelName}`);
+            } catch (error) {
+              console.log(`Label may have already been removed: ${error.message}`);
+            }

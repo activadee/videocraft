@@ -1,0 +1,261 @@
+name: Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.22
+        
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-1.22-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-1.22-
+          
+    - name: Install dependencies
+      run: go mod download
+      
+    - name: Install Python dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip3 install -r scripts/requirements.txt
+        
+    - name: Install FFmpeg
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        
+    - name: Create test directories
+      run: |
+        mkdir -p generated_videos
+        mkdir -p temp
+        
+    - name: Run tests
+      run: go test -v -race ./...
+
+  release:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.22
+        
+    - name: Install dependencies
+      run: go mod download
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        
+    - name: Install semantic-release
+      run: |
+        npm install -g semantic-release@21 \
+          @semantic-release/changelog@6 \
+          @semantic-release/git@10 \
+          @semantic-release/github@9 \
+          @semantic-release/exec@6
+          
+    - name: Create .releaserc.json
+      run: |
+        cat > .releaserc.json << 'EOF'
+        {
+          "branches": ["main"],
+          "plugins": [
+            "@semantic-release/commit-analyzer",
+            "@semantic-release/release-notes-generator",
+            [
+              "@semantic-release/changelog",
+              {
+                "changelogFile": "CHANGELOG.md"
+              }
+            ],
+            [
+              "@semantic-release/exec",
+              {
+                "prepareCmd": "echo 'Preparing release ${nextRelease.version}'"
+              }
+            ],
+            [
+              "@semantic-release/github",
+              {
+                "assets": [
+                  {
+                    "path": "dist/*.tar.gz",
+                    "label": "Release binaries"
+                  }
+                ]
+              }
+            ],
+            [
+              "@semantic-release/git",
+              {
+                "assets": ["CHANGELOG.md", "go.mod"],
+                "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+              }
+            ]
+          ]
+        }
+        EOF
+        
+    - name: Run semantic-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: semantic-release
+
+  build-and-publish:
+    runs-on: ubuntu-latest
+    needs: release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.22
+        
+    - name: Install dependencies
+      run: go mod download
+      
+    - name: Get latest tag
+      id: get_tag
+      run: |
+        TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+        
+    - name: Build binaries
+      run: |
+        mkdir -p dist
+        
+        # Build for multiple platforms
+        PLATFORMS="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64"
+        
+        for platform in $PLATFORMS; do
+          OS=${platform%/*}
+          ARCH=${platform#*/}
+          
+          if [ "$OS" = "windows" ]; then
+            EXT=".exe"
+          else
+            EXT=""
+          fi
+          
+          echo "Building for $OS/$ARCH..."
+          
+          CGO_ENABLED=0 GOOS=$OS GOARCH=$ARCH go build \
+            -ldflags="-s -w -X main.version=${{ steps.get_tag.outputs.version }}" \
+            -o dist/videocraft-$OS-$ARCH$EXT \
+            ./cmd/server
+            
+          # Create archive
+          if [ "$OS" = "windows" ]; then
+            cd dist && zip videocraft-$OS-$ARCH.zip videocraft-$OS-$ARCH$EXT && cd ..
+          else
+            tar -czf dist/videocraft-$OS-$ARCH.tar.gz -C dist videocraft-$OS-$ARCH$EXT
+          fi
+        done
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=ref,event=branch
+          type=semver,pattern={{version}},value=${{ steps.get_tag.outputs.tag }}
+          type=semver,pattern={{major}}.{{minor}},value=${{ steps.get_tag.outputs.tag }}
+          type=semver,pattern={{major}},value=${{ steps.get_tag.outputs.tag }}
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          VERSION=${{ steps.get_tag.outputs.version }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Upload release assets
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          dist/*.tar.gz
+          dist/*.zip
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'ghcr.io/${{ github.repository }}:latest'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

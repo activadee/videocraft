@@ -1,0 +1,53 @@
+services:
+  videocraft:
+    build: .
+    container_name: videocraft
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./generated_videos:/app/persistent_videos:rw
+      - ./whisper_cache:/app/whisper_cache
+      - ./config:/app/config:ro
+    environment:
+      - VIDEOCRAFT_LOG_LEVEL=info
+      - VIDEOCRAFT_SERVER_HOST=0.0.0.0
+      - VIDEOCRAFT_SERVER_PORT=3002
+      - VIDEOCRAFT_STORAGE_OUTPUT_DIR=/app/generated_videos
+      - VIDEOCRAFT_STORAGE_TEMP_DIR=/app/temp
+      - VIDEOCRAFT_STORAGE_PERSISTENT_DIR=/app/persistent_videos
+      - VIDEOCRAFT_WHISPER_CACHE_DIR=/app/whisper_cache
+    restart: unless-stopped
+    # Security Context Configuration
+    user: "1000:1000"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+      # Note: Default seccomp profile is applied automatically when not specified
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
+      - /app/temp:rw,noexec,nosuid,size=500m
+      - /app/generated_videos:rw,nosuid,size=2g
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

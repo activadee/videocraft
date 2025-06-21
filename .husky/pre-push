@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo "Running pre-push checks..."
+
+# Run only critical checks that should block push
+echo "🔍 Running staticcheck..."
+staticcheck ./...
+
+if [ $? -ne 0 ]; then
+    echo "❌ Staticcheck found critical issues!"
+    exit 1
+fi
+
+echo "🔍 Running go vet..."
+go vet ./...
+
+if [ $? -ne 0 ]; then
+    echo "❌ Go vet found issues!"
+    exit 1
+fi
+
+echo "✅ Pre-push checks passed!"

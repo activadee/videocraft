@@ -1,0 +1,125 @@
+# Pre-commit configuration for VideoCraft
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # Go formatting and imports
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+        name: Format Go code
+        description: Run gofmt on Go files
+      - id: go-imports
+        name: Fix Go imports
+        description: Run goimports on Go files
+      - id: go-vet-mod
+        name: Go vet
+        description: Run go vet on Go files
+      - id: go-mod-tidy
+        name: Tidy Go modules
+        description: Run go mod tidy
+
+  # Local hooks for project-specific linters
+  - repo: local
+    hooks:
+      - id: golangci-lint
+        name: Run golangci-lint
+        entry: golangci-lint
+        args: [run, --fix]
+        language: system
+        files: \.go$
+        pass_filenames: false
+        description: Run golangci-lint on all Go files
+
+      - id: staticcheck
+        name: Run staticcheck
+        entry: staticcheck
+        args: [./...]
+        language: system
+        files: \.go$
+        pass_filenames: false
+        description: Run staticcheck linter on all Go files
+
+      - id: go-sec
+        name: Run gosec security scanner
+        entry: gosec
+        args: [./...]
+        language: system
+        files: \.go$
+        pass_filenames: false
+        description: Run gosec security scanner
+
+      - id: go-vuln-check
+        name: Run govulncheck
+        entry: govulncheck
+        args: [./...]
+        language: system
+        files: \.go$
+        pass_filenames: false
+        description: Run govulncheck for known vulnerabilities
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        description: Remove trailing whitespace from files
+      - id: end-of-file-fixer
+        name: Fix end of files
+        description: Ensure files end with a newline
+      - id: check-yaml
+        name: Check YAML syntax
+        description: Check YAML files for syntax errors
+      - id: check-json
+        name: Check JSON syntax
+        description: Check JSON files for syntax errors
+      - id: check-toml
+        name: Check TOML syntax
+        description: Check TOML files for syntax errors
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        description: Check for files that contain merge conflict strings
+      - id: check-case-conflict
+        name: Check for case conflicts
+        description: Check for files that would conflict on case-insensitive filesystems
+      - id: check-added-large-files
+        name: Check for large files
+        description: Prevent giant files from being committed
+        args: ["--maxkb=1000"]
+      - id: check-executables-have-shebangs
+        name: Check executables have shebangs
+        description: Ensure executables have shebangs
+      - id: check-shebang-scripts-are-executable
+        name: Check shebang scripts are executable
+        description: Ensure scripts with shebangs are executable
+
+  # Python hooks (for the whisper daemon scripts)
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+        name: Format Python code
+        description: Format Python code with black
+        files: \.py$
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        name: Run flake8
+        description: Run flake8 Python linter
+        files: \.py$
+        args: [--max-line-length=88, --extend-ignore=E203]
+
+# Configuration
+default_stages: [commit]
+fail_fast: false
+
+# CI configuration
+ci:
+  autofix_commit_msg: "style: auto fixes from pre-commit hooks"
+  autofix_prs: true
+  autoupdate_commit_msg: "chore: pre-commit autoupdate"
+  autoupdate_schedule: weekly
