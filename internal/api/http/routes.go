@@ -48,7 +48,7 @@ func setupMiddleware(router *gin.Engine, cfg *app.Config, log logger.Logger) {
 	router.Use(middleware.CSRFProtection(cfg, log))
 
 	// Error handling middleware
-	router.Use(middleware.ErrorHandler(log))
+	router.Use(middleware.SecureErrorHandler(log))
 
 	// Rate limiting middleware (if enabled)
 	if cfg.Security.RateLimit > 0 {
@@ -92,12 +92,12 @@ func setupRoutes(
 	}
 
 	// REST-compliant Video API
-	v1.POST("/videos", videoHandler.CreateVideo)           // Create video job
-	v1.GET("/videos/:id", videoHandler.GetVideo)           // Get video or status
+	v1.POST("/videos", videoHandler.CreateVideo) // Create video job
+	v1.GET("/videos/:id", videoHandler.GetVideo) // Get video or status
 
 	// REST-compliant Job API
-	v1.GET("/jobs/:id", jobHandler.GetJob)                 // Get job status
-	v1.DELETE("/jobs/:id", jobHandler.DeleteJob)           // Cancel job
+	v1.GET("/jobs/:id", jobHandler.GetJob)       // Get job status
+	v1.DELETE("/jobs/:id", jobHandler.DeleteJob) // Cancel job
 
 	// Documentation endpoint
 	router.GET("/", func(c *gin.Context) {
@@ -106,8 +106,8 @@ func setupRoutes(
 			"description": "FFmpeg Dialogue Video Generation Service",
 			"version":     "0.0.1",
 			"features": gin.H{
-				"v0.0.1":          "Initial release with security-first design",
-				"documentation":   "/docs/README.md",
+				"v0.0.1":        "Initial release with security-first design",
+				"documentation": "/docs/README.md",
 			},
 			"endpoints": gin.H{
 				"health": gin.H{

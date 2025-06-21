@@ -1,415 +1,217 @@
-# VideoCraft - Advanced Video Generation Platform
+# VideoCraft
 
-## 🚨 CRITICAL SECURITY UPDATE
+A secure, AI-powered video generation platform that creates videos from JSON configurations using FFmpeg and OpenAI Whisper.
 
-**🔒 Security-First Implementation in v0.0.1**
+## What VideoCraft Does
 
-This version introduces **mandatory security enhancements** that require configuration updates:
+VideoCraft transforms JSON configurations into complete videos with:
+- **Automatic scene composition** from multiple media sources (video, audio, images)  
+- **AI-powered progressive subtitles** with word-level timing precision
+- **Security-first architecture** with comprehensive input validation and CSRF protection
+- **Production-ready deployment** with Docker and Kubernetes support
 
-### ⚠️ SECURITY FEATURES ALERT
-- **No CORS Wildcards**: `AllowOrigins: ["*"]` never permitted for security
-- **Domain Allowlisting Required**: Must configure `VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS`
-- **CSRF Protection**: POST/PUT/DELETE requests require CSRF tokens in production
-- **API Authentication**: Built-in authentication requirements
+## Key Innovation: Progressive Subtitles
 
-### 🛠️ REQUIRED CONFIGURATION
-```bash
-# 1. Configure allowed domains (REQUIRED)
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="yourdomain.com,api.yourdomain.com"
+Unlike traditional subtitle systems, VideoCraft uses OpenAI Whisper to generate **word-by-word timing** for progressive subtitle animations. Each word appears precisely when spoken, creating engaging, TikTok-style subtitle effects.
 
-# 2. Enable CSRF protection (recommended for production)
-export VIDEOCRAFT_SECURITY_ENABLE_CSRF=true
-export VIDEOCRAFT_SECURITY_CSRF_SECRET="your-secure-secret"
-
-# 3. Get CSRF token for API requests
-curl http://localhost:3002/api/v1/csrf-token
-
-# 4. Include CSRF token in state-changing requests
-curl -X POST -H "X-CSRF-Token: your-token" http://localhost:3002/api/v1/generate-video
+```json
+"subtitles": {
+  "style": "progressive",
+  "settings": {
+    "font_family": "Arial Black",
+    "font_size": 32,
+    "word_color": "#FFFFFF",
+    "outline_color": "#000000"
+  }
+}
 ```
-
-📖 **Configuration Guide**: See [Security-First Implementation Guide](security-first.md) for complete details.
-
----
-
-## Overview
-
-VideoCraft is a high-performance Go-based video generation platform that creates dynamic videos from JSON configurations. It specializes in automated video production with scene-based composition, progressive subtitles, and intelligent audio synchronization.
-
-## Key Features
-
-### 🎬 Scene-Based Video Composition
-- **Multi-scene architecture**: Structure videos into distinct scenes with individual timing and elements
-- **Flexible element support**: Audio tracks, image overlays, background videos, and subtitle integration
-- **Precise timing control**: Automatic audio duration analysis for perfect scene synchronization
-
-### 🎯 Progressive Subtitle System
-- **Word-level timing**: Advanced Whisper AI integration for precise word-by-word subtitle timing
-- **ASS format generation**: Rich subtitle styling with fonts, colors, positioning, and effects
-- **Multiple display modes**: Progressive (word-by-word) and classic (full-line) subtitle styles
-- **JSON configuration**: Per-request subtitle customization with intelligent global config fallback (v0.0.1+)
-- **Real-time transcription**: Python Whisper daemon with 5-minute idle timeout for efficiency
-
-### 🔧 Robust Architecture
-- **Microservice design**: Clean separation of concerns with dedicated services
-- **Async job processing**: Background video generation with progress tracking
-- **RESTful API**: Comprehensive HTTP API with authentication and rate limiting
-- **Security-first design**: Multi-layered security validation and input sanitization
-- **Secure error handling**: Advanced error sanitization preventing information disclosure
-- **Container-ready**: Docker and Kubernetes deployment support
-- **AI-powered documentation**: Automated documentation review with Claude AI integration
-
-### ⚡ High Performance
-- **Concurrent processing**: Parallel audio analysis and transcription
-- **FFmpeg integration**: Optimized video encoding and filter complex generation
-- **Resource management**: Intelligent cleanup and memory optimization
-- **Scalable job queue**: Handle multiple video generation requests simultaneously
 
 ## Quick Start
 
 ### Prerequisites
-- Go 1.24+ (CI uses Go 1.24.4)
-- FFmpeg
-- Python 3.8+ (for Whisper daemon)
-- Docker (optional)
+- **Go 1.24+**
+- **FFmpeg** (with libx264)
+- **Python 3.8+** with pip
+- **Docker** (recommended)
 
-### Installation
-
-#### Option 1: Docker (Recommended)
-```bash
-git clone https://github.com/activadee/videocraft.git
-cd videocraft
-docker-compose up -d
-```
-
-#### Option 2: Local Development
+### 1. Clone and Setup
 ```bash
 git clone https://github.com/activadee/videocraft.git
 cd videocraft
 
-# Install dependencies
-go mod download
-
-# Install Python requirements for Whisper daemon
+# Install Python dependencies for Whisper
 pip install -r scripts/requirements.txt
 
-# Build and run
+# Build the application
 make build
-./videocraft
 ```
 
-The server will start on `http://localhost:8080`
-
-## API Usage
-
-### 🔐 SECURITY REQUIREMENTS (v0.0.1+)
-
-### ⚠️ Critical Security Setup Required
-
-Before using the API, you **MUST** configure security settings:
-
-#### 1. Configure Domain Allowlist (REQUIRED)
+### 2. Configure Security (Required)
 ```bash
-# For production - replace with your actual domains
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="yourdomain.com,api.yourdomain.com"
+# Set allowed domains for CORS (required for web clients)
+export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000,yourdomain.com"
 
-# For development
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000,127.0.0.1:3000"
-```
-
-#### 2. Get Your API Key
-VideoCraft automatically generates a secure API key on first startup. Check the logs:
-```bash
-# The API key will be shown in the startup logs
-docker-compose logs videocraft | grep "API key"
-```
-
-Or set your own:
-```bash
+# Generate API key (or use auto-generated)
 export VIDEOCRAFT_SECURITY_API_KEY="your-secure-api-key"
 ```
 
-#### 3. Configure CSRF Protection (Production)
+### 3. Start the Server
 ```bash
-export VIDEOCRAFT_SECURITY_ENABLE_CSRF=true
-export VIDEOCRAFT_SECURITY_CSRF_SECRET="your-secure-secret"
+./videocraft
+# Server starts on http://localhost:3002
 ```
 
-### Generate Video (with CSRF)
+### 4. Generate Your First Video
 ```bash
-# 1. Get CSRF token (if CSRF enabled)
-CSRF_TOKEN=$(curl -s http://localhost:3002/api/v1/csrf-token | jq -r '.csrf_token')
+# Create a simple video configuration
+cat > example.json << 'EOF'
+[
+  {
+    "comment": "My first VideoCraft video",
+    "resolution": "1920x1080",
+    "quality": "medium",
+    "scenes": [
+      {
+        "id": "intro",
+        "background-color": "#1a1a1a",
+        "elements": [
+          {
+            "type": "audio",
+            "src": "https://example.com/your-audio.mp3"
+          },
+          {
+            "type": "subtitles",
+            "settings": {
+              "style": "progressive",
+              "font_family": "Arial Black",
+              "font_size": 36,
+              "word_color": "#FFFFFF",
+              "outline_color": "#FF6B6B"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
+EOF
 
-# 2. Generate video with security headers
-curl -X POST http://localhost:3002/api/v1/generate-video \
+# Generate video
+curl -X POST http://localhost:3002/api/v1/videos \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "X-CSRF-Token: $CSRF_TOKEN" \
-  -H "Origin: https://yourdomain.com" \
-  -d @config.json
-```
+  -H "Authorization: Bearer your-secure-api-key" \
+  -d @example.json
 
-### ⚠️ Without Domain Configuration
-If you don't configure `VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS`, cross-origin requests will be **blocked** with a 403 error.
+# Check job status (use job_id from response)
+curl http://localhost:3002/api/v1/jobs/{job_id} \
+  -H "Authorization: Bearer your-secure-api-key"
 
-### Check Job Status
-```bash
-curl http://localhost:3002/api/v1/jobs/{job_id}/status \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
-
-### Download Video
-```bash
-curl http://localhost:3002/api/v1/download/{video_id} \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+# Download completed video
+curl http://localhost:3002/api/v1/videos/{video_id} \
+  -H "Authorization: Bearer your-secure-api-key" \
   -o output.mp4
 ```
 
 ## Configuration Format
 
-VideoCraft uses a comprehensive JSON configuration format:
+VideoCraft uses an array-based JSON format supporting multiple projects:
 
 ```json
-{
-  "comment": "Example video configuration",
-  "resolution": "custom",
-  "width": 1920,
-  "height": 1080,
-  "quality": "high",
-  "elements": [
-    {
-      "type": "video",
-      "src": "https://example.com/background.mp4",
-      "volume": 0.3,
-      "z-index": -1
-    },
-    {
-      "type": "subtitles",
-      "language": "en",
-      "settings": {
-        "style": "progressive",
-        "font-family": "Arial",
-        "font-size": 48,
-        "word-color": "#FFFFFF",
-        "outline-color": "#000000",
-        "position": "center-bottom"
+[
+  {
+    "comment": "Project description",
+    "resolution": "1920x1080",
+    "quality": "high",
+    "scenes": [
+      {
+        "id": "scene1",
+        "background-color": "#000000",
+        "elements": [
+          {
+            "type": "video",
+            "src": "https://example.com/background.mp4",
+            "volume": 0.3,
+            "z-index": -1
+          },
+          {
+            "type": "audio", 
+            "src": "https://example.com/narration.mp3",
+            "volume": 1.0
+          },
+          {
+            "type": "image",
+            "src": "https://example.com/logo.png",
+            "x": 100,
+            "y": 50,
+            "z-index": 10
+          },
+          {
+            "type": "subtitles",
+            "settings": {
+              "style": "progressive",
+              "font_family": "Impact",
+              "font_size": 48,
+              "word_color": "#FFFF00",
+              "outline_color": "#000000",
+              "position": "center-bottom"
+            }
+          }
+        ]
       }
-    }
-  ],
-  "scenes": [
-    {
-      "id": "intro",
-      "elements": [
-        {
-          "type": "audio",
-          "src": "https://example.com/intro.mp3"
-        },
-        {
-          "type": "image",
-          "src": "https://example.com/logo.png",
-          "x": 100,
-          "y": 50
-        }
-      ]
-    }
-  ]
+    ],
+    "elements": [
+      // Global elements applied to all scenes
+    ]
+  }
+]
+```
+
+### Element Types
+
+**Video Elements**
+```json
+{
+  "type": "video",
+  "src": "https://example.com/video.mp4",
+  "x": 0, "y": 0,
+  "volume": 0.5,
+  "z-index": 1
 }
 ```
 
-## Architecture Overview
-
-```mermaid
-graph TB
-    Client[Client] --> API[HTTP API Layer]
-    API --> Auth[Auth Middleware]
-    API --> JobSvc[Job Service]
-    
-    JobSvc --> AudioSvc[Audio Service]
-    JobSvc --> TransSvc[Transcription Service]
-    JobSvc --> SubSvc[Subtitle Service]
-    JobSvc --> FFmpegSvc[FFmpeg Service]
-    JobSvc --> StorageSvc[Storage Service]
-    
-    TransSvc --> Daemon[Python Whisper Daemon]
-    SubSvc --> ASSGen[ASS Generator]
-    FFmpegSvc --> FFmpeg[FFmpeg Binary]
-    
-    AudioSvc --> FFprobe[FFprobe Analysis]
-    StorageSvc --> FileSystem[File System]
+**Audio Elements**
+```json
+{
+  "type": "audio", 
+  "src": "https://example.com/audio.mp3",
+  "volume": 1.0,
+  "duration": 30.5
+}
 ```
 
-### Core Components
-
-- **HTTP API Layer**: RESTful endpoints with Gin framework and secure error handling
-- **Job Service**: Async job processing and queue management  
-- **Audio Service**: Audio file analysis and duration calculation
-- **Transcription Service**: Go-Python daemon communication for Whisper AI
-- **Subtitle Service**: ASS subtitle generation with progressive timing
-- **FFmpeg Service**: Video encoding with command injection prevention
-- **Storage Service**: File management and cleanup
-- **Security Layer**: Comprehensive error sanitization and threat assessment
-
-## Progressive Subtitles Deep Dive
-
-VideoCraft's progressive subtitle system provides word-level timing accuracy:
-
-### How It Works
-1. **Audio Analysis**: Extract real audio file duration using FFprobe
-2. **Scene Timing**: Calculate precise scene start/end times based on audio durations
-3. **Transcription**: Python Whisper daemon generates word-level timestamps
-4. **Timing Mapping**: Map Whisper relative timestamps to absolute video timeline
-5. **ASS Generation**: Create styled subtitle file with word-by-word timing
-
-### Key Innovation
-Unlike simple concatenation approaches, VideoCraft uses **real audio file durations** instead of transcription speech durations for scene timing, ensuring continuous playback without gaps.
-
-**📖 Complete Technical Details**: See [internal/core/media/subtitle/CLAUDE.md](internal/core/media/subtitle/CLAUDE.md) for comprehensive implementation documentation including:
-- URL-first audio analysis without downloads
-- Python-Go daemon communication protocol
-- Word-level timing algorithms and ASS generation
-- Security patterns and validation strategies
-- Performance optimizations and testing approaches
-
-## CI/CD Pipeline
-
-VideoCraft uses a modern GitHub Actions workflow with 2025 best practices and streamlined execution for fast feedback:
-
-### Pipeline Features
-- **Streamlined Job Execution**: 5 essential jobs for optimal performance (reduced from 7)
-- **Latest Tooling**: Go 1.24.4, golangci-lint v2.1.6, codecov-action v5
-- **Built-in Caching**: Automatic dependency caching with setup-go@v5
-- **Quality Focus**: Essential testing and quality assurance maintained
-- **Performance Testing**: Automated benchmarks for regression detection
-- **Workflow Optimization**: Removed security scan and Docker test jobs for faster execution (Issue #50)
-
-### Streamlined Pipeline Jobs
-```mermaid
-graph TB
-    A[Lint Job]
-    B[Test Job] --> C[Integration Tests]
-    B --> D[Coverage Upload]
-    B --> E[Benchmark Tests]
-    
-    A -.-> H["Go 1.24.4 + golangci-lint v2.1.6<br/>10min timeout"]
-    B -.-> I["Unit Tests + Coverage<br/>30min timeout"]
-    C -.-> J["Real Dependencies<br/>20min timeout"]
-    D -.-> L["Codecov Upload<br/>depends on test"]
-    E -.-> K["Performance Testing<br/>15min timeout"]
+**Image Elements**
+```json
+{
+  "type": "image",
+  "src": "https://example.com/image.png", 
+  "x": 100, "y": 200,
+  "z-index": 5
+}
 ```
 
-### Performance Improvements (Issue #50)
-- **28.5% job reduction** (7→5 jobs) for faster CI execution
-- **5–10 minute time savings** per workflow run
-- **Built-in Go module caching** reduces dependency installation
-- **Optimized job dependencies** prevent unnecessary waiting
-- **Essential quality gates maintained** while removing redundant validations
-- **Workflow validation scripts** ensure refactoring correctness
-
-## Development
-
-### Project Structure
-```text
-videocraft/
-├── cmd/                    # Entry points (server, CLI)
-├── internal/
-│   ├── api/               # HTTP handlers and middleware
-│   ├── services/          # Business logic services  
-│   ├── domain/            # Models and domain logic
-│   └── config/            # Configuration management
-├── pkg/                   # Shared packages
-├── scripts/               # Python Whisper daemon
-└── deployments/           # Docker and K8s configs
-```
-
-### Building & Testing
-```bash
-# Development build
-make build
-
-# Production build
-make release-build
-
-# Run tests (matches CI test job)
-make test
-
-# Run linting (matches CI lint job with golangci-lint v2.1.6)
-make lint
-
-# Run security scans (matches CI security job - gosec + govulncheck)
-make security
-
-# Run benchmarks (matches CI benchmark job)
-make benchmark
-
-# Run integration tests (matches CI integration job)
-make test-integration
-
-# Run all quality checks (comprehensive validation)
-make quality-check
-```
-
-### Environment Variables
-
-#### 🔒 Security Variables (REQUIRED)
-```bash
-# CRITICAL: Domain allowlist - REQUIRED for cross-origin requests
-VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="yourdomain.com,api.yourdomain.com"
-
-# Authentication - API key (auto-generated if not set)
-VIDEOCRAFT_SECURITY_API_KEY="your-secure-api-key"
-VIDEOCRAFT_SECURITY_ENABLE_AUTH=true
-
-# CSRF protection - REQUIRED for production
-VIDEOCRAFT_SECURITY_ENABLE_CSRF=true
-VIDEOCRAFT_SECURITY_CSRF_SECRET="your-secure-secret"
-
-# Rate limiting
-VIDEOCRAFT_SECURITY_RATE_LIMIT=100
-```
-
-#### 🖥️ Server Configuration
-```bash
-PORT=8080
-HOST=0.0.0.0
-```
-
-#### 📁 Storage Configuration
-```bash
-OUTPUT_DIR=./generated_videos
-TEMP_DIR=./temp
-```
-
-#### 🎤 Whisper Daemon Configuration
-```bash
-PYTHON_PATH=/usr/bin/python3
-WHISPER_MODEL=base
-WHISPER_DEVICE=cpu
-```
-
-#### 🎬 FFmpeg Configuration
-```bash
-FFMPEG_PATH=/usr/bin/ffmpeg
-FFMPEG_TIMEOUT=600
-```
-
-### ⚠️ Security Configuration Examples
-
-#### Development Environment
-```bash
-# Minimal security for local development
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000,127.0.0.1:3000"
-export VIDEOCRAFT_SECURITY_ENABLE_CSRF=false
-export VIDEOCRAFT_SECURITY_ENABLE_AUTH=false
-```
-
-#### Production Environment
-```bash
-# Maximum security for production
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="app.yourcompany.com,api.yourcompany.com"
-export VIDEOCRAFT_SECURITY_ENABLE_CSRF=true
-export VIDEOCRAFT_SECURITY_CSRF_SECRET="production-secure-secret"
-export VIDEOCRAFT_SECURITY_ENABLE_AUTH=true
-export VIDEOCRAFT_SECURITY_RATE_LIMIT=100
+**Subtitle Elements**
+```json
+{
+  "type": "subtitles",
+  "settings": {
+    "style": "progressive",        // progressive or classic
+    "font_family": "Arial Black",
+    "font_size": 32,
+    "word_color": "#FFFFFF",
+    "outline_color": "#000000",
+    "position": "center-bottom"    // top, center, bottom
+  }
+}
 ```
 
 ## API Reference
@@ -422,284 +224,409 @@ Authorization: Bearer YOUR_API_KEY
 
 ### Endpoints
 
-#### Video Generation
-- `POST /api/v1/videos` - Create video generation job
-- `GET /api/v1/jobs/{id}/status` - Check job status
-- `POST /api/v1/jobs/{id}/cancel` - Cancel job
+**Create Video Generation Job**
+```
+POST /api/v1/videos
+Content-Type: application/json
 
-#### Video Management  
-- `GET /api/v1/videos` - List generated videos
-- `GET /api/v1/videos/{id}` - Get video info
-- `GET /api/v1/videos/{id}/download` - Download video
-- `DELETE /api/v1/videos/{id}` - Delete video
+Body: JSON array of video configurations
+Response: {"job_id": "uuid", "status": "pending"}
+```
 
-#### System
-- `GET /api/v1/health` - Health check
-- `GET /api/v1/metrics` - System metrics
+**Get Job Status**
+```
+GET /api/v1/jobs/{job_id}
+Response: {
+  "job_id": "uuid",
+  "status": "completed|processing|failed|pending",
+  "progress": 85,
+  "video_id": "uuid",
+  "error": "error message if failed"
+}
+```
 
-## Deployment
+**Download Video**
+```
+GET /api/v1/videos/{video_id}
+Response: MP4 video file
+```
 
-### Docker Compose
+**Health Check**
+```
+GET /health
+Response: {"status": "healthy", "timestamp": "2024-01-01T12:00:00Z"}
+```
+
+**CSRF Token** (if CSRF enabled)
+```
+GET /api/v1/csrf-token  
+Response: {"csrf_token": "secure-token"}
+```
+
+## Security Features
+
+VideoCraft implements comprehensive security measures:
+
+### CORS Protection
+- **No wildcard origins** - explicit domain allowlisting required
+- **Secure credentials handling** with proper origin validation
+- **Request method restrictions** to approved HTTP methods
+
+```bash
+# Required: Configure allowed domains
+export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000,yourdomain.com"
+```
+
+### CSRF Protection
+- **Token-based validation** for state-changing requests
+- **Secure token generation** with cryptographic randomness
+- **Optional but recommended** for production environments
+
+```bash
+export VIDEOCRAFT_SECURITY_ENABLE_CSRF=true
+export VIDEOCRAFT_SECURITY_CSRF_SECRET="your-secure-secret"
+```
+
+### Input Validation
+- **URL validation** prevents SSRF attacks
+- **File size limits** prevent resource exhaustion  
+- **Media format validation** ensures safe file processing
+- **Command injection protection** for FFmpeg operations
+
+### Error Handling
+- **Sanitized error responses** prevent information disclosure
+- **Structured logging** for security event monitoring
+- **Rate limiting** prevents abuse and DoS attacks
+
+## Architecture
+
+```mermaid
+graph TB
+    Client[Web Client] --> API[HTTP API :3002]
+    API --> Auth[Security Middleware]
+    Auth --> Jobs[Job Queue]
+    
+    Jobs --> Audio[Audio Service]
+    Jobs --> Whisper[Whisper Daemon]
+    Jobs --> FFmpeg[FFmpeg Service]
+    Jobs --> Storage[File Storage]
+    
+    Audio --> Probe[FFprobe Analysis]
+    Whisper --> AI[OpenAI Whisper]
+    FFmpeg --> Encoder[Video Encoder]
+    Storage --> Files[Local Filesystem]
+```
+
+### Core Components
+
+- **HTTP API**: Gin web framework with security middleware
+- **Job Queue**: Async processing with worker pools  
+- **Audio Service**: Duration analysis and metadata extraction
+- **Whisper Daemon**: Persistent Python process for AI transcription
+- **FFmpeg Service**: Secure video composition and encoding
+- **Storage Service**: File management with cleanup policies
+
+## Configuration
+
+VideoCraft supports comprehensive configuration via `config.yaml`:
+
+```yaml
+server:
+  host: "0.0.0.0"
+  port: 3002
+
+ffmpeg:
+  binary_path: "ffmpeg"
+  timeout: "1h"
+  quality: 23        # CRF value (lower = better quality)
+  preset: "medium"   # Encoding speed
+
+transcription:
+  enabled: true
+  daemon:
+    enabled: true
+    idle_timeout: "300s"     # Shutdown after 5min idle
+    startup_timeout: "120s"  # Max startup time
+    restart_max_attempts: 3
+  python:
+    path: "python3"
+    model: "base"           # tiny/base/small/medium/large
+    language: "auto"        # Auto-detect or specific language
+    device: "cpu"           # cpu/cuda
+
+subtitles:
+  enabled: true
+  style: "progressive"       # progressive/classic
+  font_family: "Arial"
+  font_size: 24
+  position: "center-bottom"
+  colors:
+    word: "#FFFFFF"
+    outline: "#000000"
+
+storage:
+  output_dir: "./generated_videos"
+  temp_dir: "./temp" 
+  max_file_size: 1073741824  # 1GB limit
+  retention_days: 7
+
+job:
+  workers: 4               # Concurrent job workers
+  queue_size: 100         # Max queued jobs
+  max_concurrent: 10      # Max concurrent jobs
+
+security:
+  rate_limit: 100         # Requests per minute
+  enable_auth: true       # API key authentication
+  api_key: ""            # Auto-generated if empty
+  enable_csrf: false     # CSRF protection
+  allowed_domains: []    # CORS allowed origins
+```
+
+## Docker Deployment
+
+### Using Docker Compose (Recommended)
+
 ```yaml
 version: '3.8'
 services:
   videocraft:
     build: .
     ports:
-      - "8080:8080"
+      - "3002:3002"
     environment:
-      - API_KEY=your-secret-key
-      - OUTPUT_DIR=/app/videos
+      - VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS=localhost:3000,yourdomain.com
+      - VIDEOCRAFT_SECURITY_API_KEY=your-secure-api-key
     volumes:
-      - ./videos:/app/videos
+      - ./generated_videos:/app/generated_videos
       - ./cache:/app/cache
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=1G,noexec,nosuid,nodev
 ```
 
-### Kubernetes
-Kubernetes deployment manifests can be created based on the Docker configuration including:
-- Deployment with resource limits
-- Service and Ingress configuration  
-- ConfigMap for environment variables
-- PersistentVolumes for video storage
-
-## Performance Considerations
-
-### Resource Requirements
-- **CPU**: 2+ cores recommended (FFmpeg encoding is CPU-intensive)
-- **Memory**: 4GB+ (Whisper model loading requires significant RAM)
-- **Storage**: SSD recommended for video I/O performance
-- **Network**: High bandwidth for external audio/video downloads
-
-### Optimization Tips
-- Use appropriate Whisper model size (base/small for speed, large for accuracy)
-- Configure FFmpeg threading based on available CPU cores
-- Implement video storage cleanup policies
-- Use Redis for job queue in production environments
-
-## 🔄 Security Configuration Guide
-
-### Security Feature Matrix
-
-| Feature | Status | Configuration Required | Production Recommended |
-|---------|--------|----------------------|------------------------|
-| CORS Wildcard Block | ✅ Active | ✅ Domain Allowlist | ✅ Always |
-| Domain Allowlisting | ✅ Required | ✅ Environment Variable | ✅ Always |
-| CSRF Protection | ✅ Available | ⚠️ Optional | ✅ Recommended |
-| API Authentication | ✅ Built-in | ⚠️ Optional | ✅ Recommended |
-
-### 📋 Initial Setup Checklist
-
-#### Before First Run
-- [ ] Identify all domains that need API access
-- [ ] Plan CORS configuration strategy
-- [ ] Decide on CSRF token implementation (production)
-- [ ] Test configuration in development environment
-
-#### Required Configuration Changes
 ```bash
-# 1. REQUIRED: Configure domain allowlist
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="yourdomain.com,api.yourdomain.com"
+# Start the service
+docker-compose up -d
 
-# 2. OPTIONAL: Enable CSRF (recommended for production)
+# Check logs
+docker-compose logs -f videocraft
+
+# Stop the service  
+docker-compose down
+```
+
+### Manual Docker Build
+
+```bash
+# Build image
+docker build -t videocraft .
+
+# Run container
+docker run -d \
+  --name videocraft \
+  -p 3002:3002 \
+  -e VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000" \
+  -e VIDEOCRAFT_SECURITY_API_KEY="your-key" \
+  -v $(pwd)/generated_videos:/app/generated_videos \
+  videocraft
+```
+
+## Development
+
+### Project Structure
+```
+videocraft/
+├── cmd/videocraft/         # Application entry point
+├── internal/
+│   ├── api/                # HTTP handlers and middleware
+│   ├── core/               # Business logic and services
+│   ├── app/                # Configuration management  
+│   ├── pkg/                # Shared utilities (logging, errors)
+│   └── storage/            # File storage backend
+├── scripts/                # Python Whisper daemon
+├── config/                 # Configuration files
+└── docs/                   # Technical documentation
+```
+
+### Building & Testing
+
+```bash
+# Install dependencies
+go mod download
+pip install -r scripts/requirements.txt
+
+# Development build
+make build
+
+# Run tests
+make test
+
+# Run with live reload (requires air)
+make dev
+
+# Security scan
+make security
+
+# Generate coverage report
+make coverage
+
+# Clean build artifacts
+make clean
+```
+
+### Environment Variables
+
+**Required for Web Clients:**
+```bash
+export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000,yourdomain.com"
+```
+
+**Optional Security:**
+```bash
+export VIDEOCRAFT_SECURITY_API_KEY="your-secure-api-key"
 export VIDEOCRAFT_SECURITY_ENABLE_CSRF=true
-export VIDEOCRAFT_SECURITY_CSRF_SECRET="your-secure-secret"
+export VIDEOCRAFT_SECURITY_CSRF_SECRET="your-csrf-secret"
 ```
 
-#### Configure Client Applications
-```javascript
-// Insecure approach - Never use wildcard CORS in production
-fetch('http://api.videocraft.com/generate-video', {
-  method: 'POST',
-  body: JSON.stringify(config)
-});
-
-// v0.0.1+ - Secure approach with proper Origin header and CSRF token
-// 1. Get CSRF token
-const csrfResponse = await fetch('/api/v1/csrf-token');
-const { csrf_token } = await csrfResponse.json();
-
-// 2. Include CSRF token in requests
-fetch('http://api.videocraft.com/generate-video', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-CSRF-Token': csrf_token,
-    'Authorization': 'Bearer YOUR_API_KEY'
-  },
-  body: JSON.stringify(config)
-});
-```
-
-#### Post-Setup Verification
-- [ ] Verify all cross-origin requests work from allowed domains
-- [ ] Test CSRF token generation and validation
-- [ ] Confirm authentication still works
-- [ ] Monitor logs for security violations
-
-### 🔒 Security Features Details
-
-#### 1. CORS Security Implementation
-- **Feature**: `AllowOrigins: ["*"]` never permitted
-- **Impact**: Cross-origin requests only allowed from configured domains
-- **Action Required**: Configure `VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS`
-
-#### 2. CSRF Protection
-- **Feature**: POST/PUT/DELETE requests may require CSRF tokens
-- **Impact**: State-changing requests need additional header when enabled
-- **Action Required**: Get token from `/api/v1/csrf-token` and include in `X-CSRF-Token` header
-
-#### 3. Built-in Authentication
-- **Feature**: API key validation and security logging
-- **Impact**: Secure API access with proper Authorization header format
-- **Action Required**: Use `Authorization: Bearer YOUR_API_KEY` format when enabled
-
-### 🔄 Emergency Disable
-
-If you need to temporarily disable security features (development only):
-
+**Server Configuration:**
 ```bash
-# Temporarily disable security features (development only)
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000,127.0.0.1:3000"
-export VIDEOCRAFT_SECURITY_ENABLE_CSRF=false
-export VIDEOCRAFT_SECURITY_ENABLE_AUTH=false
+export VIDEOCRAFT_SERVER_HOST="0.0.0.0"
+export VIDEOCRAFT_SERVER_PORT=3002
 ```
 
-⚠️ **Warning**: Only disable security features in development environments.
+**Storage Configuration:**
+```bash
+export VIDEOCRAFT_STORAGE_OUTPUT_DIR="./generated_videos"
+export VIDEOCRAFT_STORAGE_TEMP_DIR="./temp"
+```
 
-### 📞 Configuration Support
-
-- **Documentation**: [Security-First Implementation Guide](security-first.md)
-- **Issues**: Report configuration problems via GitHub Issues
-- **Security Questions**: Tag issues with `security` label
+**Whisper Configuration:**
+```bash
+export VIDEOCRAFT_TRANSCRIPTION_PYTHON_MODEL="base"
+export VIDEOCRAFT_TRANSCRIPTION_PYTHON_DEVICE="cpu"
+```
 
 ## Troubleshooting
 
-### 🔒 Security Issues (v0.0.1+)
+### Common Issues
 
-**CORS Errors - "Access to fetch blocked by CORS policy"**
+**Server won't start**
 ```bash
-# Symptom: Browser console shows CORS policy errors
-# Solution: Add your domain to the allowlist
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="yourdomain.com,api.yourdomain.com"
+# Check port availability
+lsof -i :3002
 
-# Debug: Check server logs for CORS_ORIGIN_REJECTED events
-docker-compose logs videocraft | grep "CORS_ORIGIN_REJECTED"
-```
-
-**CSRF Token Errors - "CSRF token required"**
-```bash
-# Symptom: POST/PUT/DELETE requests return 403 with "CSRF token required"
-# Solution: Get CSRF token and include in headers
-CSRF_TOKEN=$(curl -s http://localhost:3002/api/v1/csrf-token | jq -r '.csrf_token')
-curl -X POST -H "X-CSRF-Token: $CSRF_TOKEN" http://localhost:3002/api/v1/generate-video
-
-# Debug: Check for CSRF_TOKEN_MISSING or CSRF_TOKEN_INVALID logs
-docker-compose logs videocraft | grep "CSRF_SECURITY_VIOLATION"
-```
-
-**Authentication Errors - "Authorization header required"**
-```bash
-# Symptom: 401 Unauthorized responses
-# Solution: Include API key in Authorization header
-curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3002/api/v1/videos
-
-# Get API key from logs if auto-generated
-docker-compose logs videocraft | grep "Generated API key"
-```
-
-**Cross-Origin Requests Blocked**
-```bash
-# Symptom: All cross-origin requests return 403
-# Solution: Configure allowed domains environment variable
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="trusted.example.com,api.trusted.org"
-
-# For development with localhost
-export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000,127.0.0.1:3000"
-```
-
-### Common Application Issues
-
-**Whisper Daemon Not Starting**
-```bash
-# Check Python requirements
-pip install -r scripts/requirements.txt
-
-# Test Whisper installation
-python -c "import whisper; print('OK')"
-```
-
-**FFmpeg Errors**
-```bash
 # Verify FFmpeg installation
 ffmpeg -version
 
-# Check audio file accessibility
-ffprobe "your-audio-url"
+# Check Python dependencies
+python -c "import whisper; print('Whisper OK')"
 ```
 
-**Memory Issues**
-- Reduce Whisper model size
-- Decrease concurrent job limits
-- Implement file cleanup policies
+**CORS errors in browser**
+```bash
+# Add your domain to allowed list
+export VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS="localhost:3000,yourdomain.com"
 
-### 🛠️ Debug Commands
+# Check browser console for specific error
+# Look for server logs: docker-compose logs videocraft | grep CORS
+```
+
+**Whisper daemon fails**
+```bash
+# Test Whisper manually
+python scripts/whisper_daemon.py
+
+# Check available models
+python -c "import whisper; print(whisper.available_models())"
+
+# For GPU support, install CUDA version of PyTorch
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
+**Video generation fails**
+```bash
+# Verify media URLs are accessible
+curl -I "https://your-media-url.com/audio.mp3"
+
+# Check FFmpeg can process your media
+ffprobe "https://your-media-url.com/audio.mp3"
+
+# Monitor job status for detailed error messages
+curl http://localhost:3002/api/v1/jobs/{job_id}
+```
+
+**Out of memory errors**
+```bash
+# Use smaller Whisper model
+export VIDEOCRAFT_TRANSCRIPTION_PYTHON_MODEL="tiny"
+
+# Reduce concurrent jobs
+export VIDEOCRAFT_JOB_MAX_CONCURRENT=2
+
+# Increase Docker memory limit
+docker run --memory=4g videocraft
+```
+
+### Debug Commands
 
 ```bash
-# Test CORS configuration
-curl -H "Origin: https://yourdomain.com" -X OPTIONS http://localhost:3002/api/v1/videos
+# Test API connectivity
+curl http://localhost:3002/health
 
 # Get CSRF token
 curl http://localhost:3002/api/v1/csrf-token
 
 # Test authentication
-curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3002/api/v1/health
+curl -H "Authorization: Bearer your-key" http://localhost:3002/health
 
-# Check security logs
-docker-compose logs videocraft | grep "SECURITY_VIOLATION"
+# Monitor logs
+docker-compose logs -f videocraft | grep ERROR
 ```
 
-## AI-Powered Documentation
+## Performance & Scaling
 
-VideoCraft includes an AI-powered documentation review system using Claude AI to ensure high-quality, accurate documentation.
+### Resource Requirements
+- **CPU**: 2+ cores (FFmpeg encoding is CPU-intensive)
+- **Memory**: 4GB+ (Whisper models require significant RAM)  
+- **Storage**: SSD recommended for video I/O
+- **Network**: High bandwidth for external media downloads
 
-### Features
-- **Automatic Review**: Documentation changes are automatically reviewed on commits to main
-- **Code-Docs Sync**: Detects when code changes require documentation updates
-- **Security Focus**: Special attention to security-related documentation
-- **Quality Standards**: Ensures consistency, accuracy, and completeness
+### Optimization Tips
+- **Use smaller Whisper models** (tiny/base) for faster processing
+- **Enable GPU acceleration** if available (CUDA support)
+- **Implement Redis** for job queue in multi-instance deployments
+- **Use CDN** for frequently accessed media files
+- **Configure FFmpeg presets** based on quality vs speed requirements
 
-### Setup
-1. Add `ANTHROPIC_API_KEY` to repository secrets (for API-based integration)
-2. Or install the Claude GitHub app (for OAuth integration)
-3. The workflow automatically triggers on documentation or code changes
+### Scaling Options
+- **Horizontal scaling**: Multiple VideoCraft instances behind load balancer
+- **Dedicated workers**: Separate transcription and video processing services  
+- **External storage**: S3/MinIO for generated videos
+- **Queue backend**: Redis or RabbitMQ for job distribution
 
-See the GitHub Actions workflow configurations in `.github/workflows/docs-*.yml` for setup details.
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+2. Create a feature branch (`git checkout -b feature/new-feature`)
+3. Make your changes with tests
+4. Run the full test suite (`make test`)
+5. Submit a pull request
 
 ### Development Guidelines
 - Follow Go best practices and idioms
-- Add unit tests for new functionality
+- Add unit tests for new functionality  
 - Update documentation for API changes
 - Use conventional commit messages
-- Documentation changes trigger AI review for quality assurance
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- **Documentation**: See individual package CLAUDE.md files for detailed technical docs
-- **Issues**: Report bugs and feature requests via GitHub Issues
-- **Contributing**: See the Contributing section above for development guidelines
+- Ensure security validations for user inputs
 
 ---
 
-Built with ❤️ using Go, FFmpeg, and Whisper AI
+**Built with Go, FFmpeg, and OpenAI Whisper**
