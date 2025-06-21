@@ -1,0 +1,40 @@
+# Binaries
+videocraft
+*.exe
+
+# Build artifacts
+coverage.out
+coverage.html
+
+# Generated content
+generated_videos/
+temp/
+whisper_cache/
+
+# Logs
+*.log
+
+# Development files
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies (will be downloaded in container)
+vendor/

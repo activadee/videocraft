@@ -1,0 +1,220 @@
+name: Scheduled Documentation Review
+
+# Weekly comprehensive documentation review and improvements
+
+on:
+  schedule:
+    - cron: "0 2 * * 0" # Sunday at 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      review_scope:
+        description: "Review scope"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - "all"
+          - "technical"
+          - "user-docs"
+          - "api-docs"
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+
+jobs:
+  scheduled-documentation-review:
+    runs-on: ubuntu-latest
+    if: github.repository_owner == github.actor || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Generate GitHub App Token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Configure Git as Bot
+        run: |
+          git config --global user.email "auto-doc-bot[bot]@users.noreply.github.com"
+          git config --global user.name "auto-doc-bot[bot]"
+          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git
+
+      - name: Analyze Documentation Health
+        id: analyze-docs
+        run: |
+          DOC_FILES=$(find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | head -20)
+          echo "$DOC_FILES" > /tmp/doc_files.txt
+
+          RECENT_CHANGES=$(git log --since="7 days ago" --name-only --pretty=format: -- "*.md" | sort -u | grep -v "^$" || echo "")
+
+          if [ -n "$RECENT_CHANGES" ]; then
+            echo "has_recent_changes=true" >> $GITHUB_OUTPUT
+            echo "$RECENT_CHANGES" > /tmp/recent_changes.txt
+          else
+            echo "has_recent_changes=false" >> $GITHUB_OUTPUT
+            echo "" > /tmp/recent_changes.txt
+          fi
+
+      - name: Comprehensive Documentation Review
+        uses: grll/claude-code-action@v0.0.19-oauth
+        env:
+          GITHUB_ACTOR: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          use_oauth: true
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
+          claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
+          claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
+          timeout_minutes: "45"
+          model: "claude-sonnet-4-20250514"
+          direct_prompt: |
+            🤖 **VideoCraft Scheduled Documentation Review**
+
+            I'm performing a comprehensive documentation review for the VideoCraft repository.
+
+            ## 📊 **Review Context**
+            - **Review Scope**: ${{ github.event.inputs.review_scope || 'all' }}
+            - **Trigger**: ${{ github.event_name == 'schedule' && 'Scheduled weekly review' || 'Manual trigger' }}
+            - **Recent Changes**: ${{ steps.analyze-docs.outputs.has_recent_changes }}
+
+            ## 📋 **Documentation Files**
+            ```
+            $(cat /tmp/doc_files.txt)
+            ```
+
+            ## 🎯 **Comprehensive Review Tasks**
+            1. Review and update outdated information
+            2. Verify accuracy of technical details
+            3. Check code examples for correctness
+            4. Update version references and compatibility info
+            5. Improve document structure and flow
+            6. Fix broken internal and external links
+            7. Standardize heading hierarchy
+            8. Enhance clarity and readability
+            9. Add missing examples where helpful
+            10. Remove deprecated information
+
+            ## 📝 **Instructions**
+            **IMPORTANT: Edit files directly to implement improvements.**
+            1. Focus on files that need the most attention
+            2. Make substantive improvements, not just cosmetic changes
+            3. Prioritize accuracy and clarity
+            4. Update technical details to match current implementation
+
+      - name: Create Documentation Improvement PR
+        id: create-pr
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+
+          BRANCH_NAME="docs/scheduled-review-$(date +%Y%m%d)"
+          git checkout -b "$BRANCH_NAME"
+          git add -A
+
+          git commit -m "docs: scheduled documentation review and improvements
+
+          🤖 Comprehensive documentation review performed:
+          - Updated technical accuracy and current information
+          - Improved structure and organization
+          - Enhanced code examples and configurations
+          - Fixed formatting and syntax issues
+          - Improved clarity and user experience
+
+          Generated by auto-doc-bot[bot] via scheduled review"
+
+          git push origin "$BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.create-pr.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const branchName = '${{ steps.create-pr.outputs.branch_name }}';
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '📚 Scheduled Documentation Review and Improvements',
+              head: branchName,
+              base: 'main',
+              body: `## 🤖 Automated Documentation Review
+
+            This PR contains comprehensive documentation improvements from the scheduled weekly review.
+
+            ### 🔍 Review Summary
+            - **Review Type**: ${{ github.event.inputs.review_scope || 'Comprehensive (all documentation)' }}
+            - **Trigger**: ${{ github.event_name == 'schedule' && 'Scheduled weekly review' || 'Manual review request' }}
+            - **Generated**: ${new Date().toISOString()}
+
+            ### ✅ Improvements Made
+            - ✏️ Updated technical accuracy and current information
+            - 🏗️ Improved document structure and organization
+            - 💻 Enhanced code examples and configuration details
+            - 🔗 Fixed broken links and cross-references
+            - 📝 Corrected formatting and syntax issues
+            - 🎯 Improved clarity and user experience
+            - 🧹 Removed outdated and deprecated information
+
+            ### 🔍 Review Required
+            Please review these changes to ensure:
+            - [ ] Technical accuracy is maintained
+            - [ ] No important information was inadvertently removed
+            - [ ] Code examples are correct and tested
+            - [ ] Links and references work properly
+            - [ ] Changes align with current project direction
+
+            *This PR was generated automatically by auto-doc-bot[bot] as part of scheduled documentation maintenance.*`
+            });
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['documentation', 'automated', 'scheduled-review']
+            });
+
+      - name: Create Summary Issue
+        if: steps.create-pr.outputs.has_changes == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '📋 Documentation Review Summary - No Changes Needed',
+              body: `## 🤖 Scheduled Documentation Review Complete
+
+            The automated documentation review has been completed with no changes required.
+
+            ### ✅ Review Results
+            - **Review Date**: ${new Date().toISOString()}
+            - **Review Scope**: ${{ github.event.inputs.review_scope || 'all' }}
+            - **Status**: Documentation appears to be up-to-date and accurate
+
+            ### 📝 Conclusion
+            No immediate improvements were identified. The documentation appears to be well-maintained and current.
+
+            *This issue was generated automatically by auto-doc-bot[bot] as part of scheduled documentation maintenance.*`,
+              labels: ['documentation', 'automated', 'review-summary']
+            });

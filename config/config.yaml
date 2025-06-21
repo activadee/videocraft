@@ -1,0 +1,58 @@
+server:
+  host: "0.0.0.0"
+  port: 3002
+
+ffmpeg:
+  binary_path: "ffmpeg"
+  timeout: "1h"
+  quality: 23
+  preset: "medium"
+
+transcription:
+  enabled: true
+  daemon:
+    enabled: true
+    idle_timeout: "300s" # 5 minutes
+    startup_timeout: "120s" # 2 minutes for model loading
+    restart_max_attempts: 3
+  python:
+    path: "python3"
+    script_path: "./scripts"
+    model: "base" # tiny/base/small/medium/large
+    language: "auto"
+    device: "cpu" # always use cpu due to MPS sparse tensor issues
+  processing:
+    workers: 2
+    timeout: "60s"
+
+subtitles:
+  enabled: true
+  style: "progressive" # progressive/classic
+  font_family: "Arial"
+  font_size: 24
+  position: "center-bottom"
+  colors:
+    word: "#FFFFFF"
+    outline: "#000000"
+
+storage:
+  output_dir: "./generated_videos"
+  temp_dir: "./temp"
+  max_file_size: 1073741824 # 1GB
+  cleanup_interval: "1h"
+  retention_days: 7
+
+job:
+  workers: 4
+  queue_size: 100
+  max_concurrent: 10
+  status_check_interval: "5s"
+
+log:
+  level: "debug"
+  format: "text"
+
+security:
+  rate_limit: 100
+  enable_auth: true
+  api_key: "your_api_key_here"

@@ -1,0 +1,206 @@
+name: Manual Documentation Review
+
+# Manual trigger workflow for targeted documentation improvements
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_files:
+        description: "Specific files to review (comma-separated, optional)"
+        required: false
+        type: string
+      review_type:
+        description: "Type of review to perform"
+        required: true
+        default: "general"
+        type: choice
+        options:
+          - "general"
+          - "technical-accuracy"
+          - "user-experience"
+          - "api-documentation"
+          - "security-review"
+          - "formatting-only"
+      create_pr:
+        description: "Create PR with changes"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+
+jobs:
+  manual-documentation-review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate GitHub App Token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Configure Git as Bot
+        run: |
+          git config --global user.email "auto-doc-bot[bot]@users.noreply.github.com"
+          git config --global user.name "auto-doc-bot[bot]"
+          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git
+
+      - name: Prepare Review Targets
+        id: prepare-targets
+        run: |
+          TARGET_FILES="${{ github.event.inputs.target_files }}"
+
+          if [ -n "$TARGET_FILES" ]; then
+            echo "$TARGET_FILES" | tr ',' '\n' > /tmp/target_files.txt
+            echo "has_specific_targets=true" >> $GITHUB_OUTPUT
+          else
+            find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | head -15 > /tmp/target_files.txt
+            echo "has_specific_targets=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Targeted Documentation Review
+        uses: grll/claude-code-action@v0.0.19-oauth
+        env:
+          GITHUB_ACTOR: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          use_oauth: true
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
+          claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
+          claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
+          timeout_minutes: "30"
+          model: "claude-sonnet-4-20250514"
+          direct_prompt: |
+            🤖 **VideoCraft Manual Documentation Review**
+
+            I'm performing a targeted documentation review based on your specific requirements.
+
+            ## 📊 **Review Configuration**
+            - **Review Type**: ${{ github.event.inputs.review_type }}
+            - **Target Files**: ${{ steps.prepare-targets.outputs.has_specific_targets == 'true' && 'Specific files requested' || 'All documentation files' }}
+            - **Create PR**: ${{ github.event.inputs.create_pr }}
+            - **Triggered by**: ${{ github.actor }}
+
+            ## 📋 **Target Files**
+            ```
+            $(cat /tmp/target_files.txt)
+            ```
+
+            ## 🎯 **Review Focus: ${{ github.event.inputs.review_type }}**
+
+            ### Review Tasks:
+            - Fix technical inaccuracies and update information
+            - Improve user experience and clarity
+            - Update outdated examples and references
+            - Fix formatting and syntax issues
+            - Enhance documentation structure
+
+            ## 📝 **Instructions**
+            **IMPORTANT: Edit files directly to implement improvements.**
+            1. Focus on the specified review type
+            2. Make meaningful improvements
+            3. Ensure technical accuracy
+            4. Apply changes systematically
+
+      - name: Handle Changes
+        id: handle-changes
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          git add -A
+
+          CREATE_PR="${{ github.event.inputs.create_pr }}"
+
+          if [ "$CREATE_PR" = "true" ]; then
+            BRANCH_NAME="docs/manual-review-$(date +%Y%m%d%H%M)"
+            git checkout -b "$BRANCH_NAME"
+            echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          fi
+
+          git commit -m "docs: manual documentation review (${{ github.event.inputs.review_type }})
+
+          🤖 Manual documentation review performed:
+          - Review type: ${{ github.event.inputs.review_type }}
+          - Target: ${{ steps.prepare-targets.outputs.has_specific_targets == 'true' && 'Specific files' || 'All documentation' }}
+          - Triggered by: ${{ github.actor }}
+
+          Generated by auto-doc-bot[bot] via manual review"
+
+          if [ "$CREATE_PR" = "true" ]; then
+            git push origin "$BRANCH_NAME"
+          else
+            git push origin main
+          fi
+
+      - name: Create Pull Request
+        if: steps.handle-changes.outputs.has_changes == 'true' && github.event.inputs.create_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const branchName = '${{ steps.handle-changes.outputs.branch_name }}';
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `📚 Manual Documentation Review: ${{ github.event.inputs.review_type }}`,
+              head: branchName,
+              base: 'main',
+              body: `## 🤖 Manual Documentation Review
+
+            This PR contains documentation improvements from a manual review request.
+
+            ### 🔍 Review Details
+            - **Review Type**: ${{ github.event.inputs.review_type }}
+            - **Target Files**: ${{ steps.prepare-targets.outputs.has_specific_targets == 'true' && 'Specific files requested' || 'All documentation files' }}
+            - **Requested by**: ${{ github.actor }}
+            - **Generated**: ${new Date().toISOString()}
+
+            ### ✅ Review Focus Applied
+            The review focused specifically on **${{ github.event.inputs.review_type }}** improvements.
+
+            ### 🔍 Review Required
+            Please review these changes to ensure they meet your expectations and maintain accuracy.
+
+            *This PR was generated automatically by auto-doc-bot[bot] based on your manual review request.*`
+            });
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['documentation', 'manual-review', '${{ github.event.inputs.review_type }}']
+            });
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.handle-changes.outputs.has_changes }}" = "true" ]; then
+            if [ "${{ github.event.inputs.create_pr }}" = "true" ]; then
+              echo "✅ Documentation improvements created as PR"
+            else
+              echo "✅ Documentation improvements committed directly to main"
+            fi
+          else
+            echo "ℹ️ No documentation improvements were needed"
+          fi

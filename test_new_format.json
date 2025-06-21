@@ -1,0 +1,167 @@
+[
+  {
+    "comment": "Dynamic Family Guy Viral Video",
+    "resolution": "custom",
+    "quality": "high",
+    "width": 1080,
+    "height": 1920,
+    "scenes": [
+      {
+        "id": "scene-0",
+        "background-color": "transparent",
+        "elements": [
+          {
+            "type": "image",
+            "src": "https://drive.google.com/uc?export=download&id=1OMElq71jMkv6BbYaNkPZ9AjCwLDkuBUp",
+            "x": 10,
+            "y": 1300
+          },
+          {
+            "type": "audio",
+            "src": "https://drive.google.com/uc?export=download&id=1Y_lqcPsw9yGSJQz2vZPDOqpJ0D787-KN"
+          }
+        ]
+      },
+      {
+        "id": "scene-1",
+        "background-color": "transparent",
+        "elements": [
+          {
+            "type": "image",
+            "src": "https://drive.google.com/uc?export=download&id=1G_5yvOweSo5RWSmTNGjXpjZoU-pIxiP6",
+            "x": 500,
+            "y": 1300
+          },
+          {
+            "type": "audio",
+            "src": "https://drive.google.com/uc?export=download&id=1edgV6pGEIV_TPkB-nfvuiBIL6Sat8ZKg"
+          }
+        ]
+      },
+      {
+        "id": "scene-2",
+        "background-color": "transparent",
+        "elements": [
+          {
+            "type": "image",
+            "src": "https://drive.google.com/uc?export=download&id=1OMElq71jMkv6BbYaNkPZ9AjCwLDkuBUp",
+            "x": 10,
+            "y": 1300
+          },
+          {
+            "type": "audio",
+            "src": "https://drive.google.com/uc?export=download&id=1h-KpKuNt534uMRerBYZjDFmV4hSoMVxx"
+          }
+        ]
+      },
+      {
+        "id": "scene-3",
+        "background-color": "transparent",
+        "elements": [
+          {
+            "type": "image",
+            "src": "https://drive.google.com/uc?export=download&id=1G_5yvOweSo5RWSmTNGjXpjZoU-pIxiP6",
+            "x": 500,
+            "y": 1300
+          },
+          {
+            "type": "audio",
+            "src": "https://drive.google.com/uc?export=download&id=1sPueDCGImgcU6R-zWXcfc4LMDaaRHZmI"
+          }
+        ]
+      },
+      {
+        "id": "scene-4",
+        "background-color": "transparent",
+        "elements": [
+          {
+            "type": "image",
+            "src": "https://drive.google.com/uc?export=download&id=1OMElq71jMkv6BbYaNkPZ9AjCwLDkuBUp",
+            "x": 10,
+            "y": 1300
+          },
+          {
+            "type": "audio",
+            "src": "https://drive.google.com/uc?export=download&id=1tN9GNcpJdKrCNxEgguZ_NlN5gQft46dp"
+          }
+        ]
+      },
+      {
+        "id": "scene-5",
+        "background-color": "transparent",
+        "elements": [
+          {
+            "type": "image",
+            "src": "https://drive.google.com/uc?export=download&id=1G_5yvOweSo5RWSmTNGjXpjZoU-pIxiP6",
+            "x": 500,
+            "y": 1300
+          },
+          {
+            "type": "audio",
+            "src": "https://drive.google.com/uc?export=download&id=1AxCoywSEJdju7N5It5RR8mf2_3KkJZCA"
+          }
+        ]
+      },
+      {
+        "id": "scene-6",
+        "background-color": "transparent",
+        "elements": [
+          {
+            "type": "image",
+            "src": "https://drive.google.com/uc?export=download&id=1OMElq71jMkv6BbYaNkPZ9AjCwLDkuBUp",
+            "x": 10,
+            "y": 1300
+          },
+          {
+            "type": "audio",
+            "src": "https://drive.google.com/uc?export=download&id=1eF74_F_1cTcgg_MB4swCkfinIGR9wMms"
+          }
+        ]
+      },
+      {
+        "id": "scene-7",
+        "background-color": "transparent",
+        "elements": [
+          {
+            "type": "image",
+            "src": "https://drive.google.com/uc?export=download&id=1G_5yvOweSo5RWSmTNGjXpjZoU-pIxiP6",
+            "x": 500,
+            "y": 1300
+          },
+          {
+            "type": "audio",
+            "src": "https://drive.google.com/uc?export=download&id=1n62ttRDhX7MNqAxYO1gZuf-zVr1FyOw9"
+          }
+        ]
+      }
+    ],
+    "elements": [
+      {
+        "type": "video",
+        "src": "https://drive.google.com/uc?export=download&id=1CCKfR0pv5N3uB41mnapiPQzUEuCrvDsV",
+        "z-index": -1,
+        "volume": 0.5,
+        "resize": "fit",
+        "duration": 275.82
+      },
+      {
+        "id": "q41n9kxp",
+        "type": "subtitles",
+        "settings": {
+          "style": "progressive",
+          "font-family": "Luckiest Guy",
+          "font-size": 10,
+          "word-color": "#24ff03",
+          "line-color": "#FFFFFF",
+          "shadow-color": "#000000",
+          "shadow-offset": 1,
+          "box-color": "#260B1B",
+          "position": "center-top",
+          "outline-color": "#000000",
+          "outline-width": 1
+        },
+        "language": "en"
+      }
+    ]
+  }
+]
