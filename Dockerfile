@@ -3,6 +3,8 @@ FROM golang:1.24-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git gcc musl-dev
+# Install python3 and pip for Whisper
+RUN apk add --no-cache python3 py3-pip
 
 WORKDIR /app
 

@@ -83,7 +83,7 @@ func (h *VideoHandler) CreateVideo(c *gin.Context) {
 		"video_id": job.VideoID,
 		"status": job.Status,
 		"message": "Video generation started",
-		"status_url": fmt.Sprintf("/api/v1/jobs/%s/status", job.ID),
+		"status_url": fmt.Sprintf("/api/v1/jobs/%s", job.ID),
 	})
 }
 
