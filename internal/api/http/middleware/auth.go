@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -42,6 +43,8 @@ func Auth(apiKey string) gin.HandlerFunc {
 		}
 
 		if providedKey != apiKey {
+			fmt.Printf("Invalid API key provided: %s\n", providedKey) // Log invalid attempts
+			fmt.Printf("Expected API key: %s\n", apiKey) // Log expected key for clarity
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "Invalid API key",
 				"code":  "INVALID_API_KEY",
