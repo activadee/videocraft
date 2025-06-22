@@ -55,4 +55,4 @@ log:
 security:
   rate_limit: 100
   enable_auth: true
-  api_key: "your_api_key_here"
+  # api_key: "your_api_key_here"

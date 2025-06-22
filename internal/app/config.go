@@ -142,9 +142,11 @@ func Load() (*Config, error) {
 	// Only generate if no API key is configured via environment or config file
 	if config.Security.EnableAuth && config.Security.APIKey == "" && !viper.IsSet("security.api_key") {
 		generatedKey, err := generateSecureAPIKey()
+		// If generation fails, return an error
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate API key: %w", err)
 		}
+		fmt.Printf("Generated API key: %s\n", generatedKey) // Log the generated key for visibility
 		config.Security.APIKey = generatedKey
 	}
 
