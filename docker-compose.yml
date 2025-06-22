@@ -16,7 +16,7 @@ services:
       - VIDEOCRAFT_STORAGE_TEMP_DIR=/app/temp
       - VIDEOCRAFT_STORAGE_PERSISTENT_DIR=/app/persistent_videos
       - VIDEOCRAFT_WHISPER_CACHE_DIR=/app/whisper_cache
-      - VIDEOCRAFT_SECURITY_API_KEY=$API_KEY
+      - VIDEOCRAFT_SECURITY_API_KEY=${API_KEY}
     restart: unless-stopped
     # Security Context Configuration
     user: "1000:1000"
