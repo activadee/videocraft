@@ -65,7 +65,7 @@ COPY config/config.yaml ./config/
 COPY scripts/ ./scripts/
 
 # Install Python dependencies for Whisper
-RUN pip3 install --no-cache-dir -r scripts/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r scripts/requirements.txt
 
 # Create directories and set permissions
 RUN mkdir -p /app/generated_videos /app/temp /app/whisper_cache && \
