@@ -25,8 +25,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
     -ldflags "-w -s -X main.version=${VERSION} -X main.buildDate=${BUILD_DATE} -X main.gitCommit=${VCS_REF}" \
     -o videocraft cmd/server/main.go
 
-# Final stage
-FROM alpine:latest
+# Final stage - Use Debian for better Python/PyTorch compatibility
+FROM debian:bookworm-slim
 
 # Add metadata
 LABEL org.opencontainers.image.title="VideoCraft" \
@@ -41,17 +41,18 @@ LABEL org.opencontainers.image.title="VideoCraft" \
       org.opencontainers.image.licenses="MIT"
 
 # Install runtime dependencies including Python3 for Whisper
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     ca-certificates \
     tzdata \
     curl \
     python3 \
-    py3-pip
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create user
-RUN addgroup -g 1000 videocraft && \
-    adduser -D -u 1000 -G videocraft videocraft
+RUN groupadd -g 1000 videocraft && \
+    useradd -d /app -u 1000 -g videocraft -s /bin/bash videocraft
 
 WORKDIR /app
 
