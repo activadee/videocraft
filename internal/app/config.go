@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -123,6 +125,9 @@ func Load() (*Config, error) {
 	viper.SetEnvPrefix("VIDEOCRAFT")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
+	// Log all VIDEOCRAFT environment variables for debugging
+	logEnvironmentVariables()
+
 	// Manual bindings for complex types
 	_ = viper.BindEnv("security.allowed_domains", "VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS")
 
@@ -233,4 +238,44 @@ func generateSecureAPIKey() (string, error) {
 	}
 	// Encode as hexadecimal string (64 characters)
 	return hex.EncodeToString(bytes), nil
+}
+
+// logEnvironmentVariables logs all VIDEOCRAFT environment variables for debugging
+func logEnvironmentVariables() {
+	fmt.Println("=== VIDEOCRAFT Environment Variables Debug ===")
+	
+	var videocraftVars []string
+	for _, env := range os.Environ() {
+		if strings.HasPrefix(env, "VIDEOCRAFT_") {
+			videocraftVars = append(videocraftVars, env)
+		}
+	}
+	
+	if len(videocraftVars) == 0 {
+		fmt.Println("No VIDEOCRAFT_ environment variables found")
+		return
+	}
+	
+	sort.Strings(videocraftVars)
+	for _, env := range videocraftVars {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 {
+			key := parts[0]
+			value := parts[1]
+			
+			// Mask sensitive values
+			if strings.Contains(strings.ToLower(key), "key") || 
+			   strings.Contains(strings.ToLower(key), "secret") ||
+			   strings.Contains(strings.ToLower(key), "password") {
+				if len(value) > 8 {
+					value = value[:4] + "***" + value[len(value)-4:]
+				} else {
+					value = "***"
+				}
+			}
+			
+			fmt.Printf("  %s = %s\n", key, value)
+		}
+	}
+	fmt.Println("=== End Environment Variables ===")
 }
