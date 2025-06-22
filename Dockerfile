@@ -40,12 +40,14 @@ LABEL org.opencontainers.image.title="VideoCraft" \
       org.opencontainers.image.documentation="https://github.com/activadee/videocraft#readme" \
       org.opencontainers.image.licenses="MIT"
 
-# Install runtime dependencies
+# Install runtime dependencies including Python3 for Whisper
 RUN apk add --no-cache \
     ffmpeg \
     ca-certificates \
     tzdata \
-    curl
+    curl \
+    python3 \
+    py3-pip
 
 # Create user
 RUN addgroup -g 1000 videocraft && \
