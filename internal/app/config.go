@@ -130,6 +130,7 @@ func Load() (*Config, error) {
 
 	// Manual bindings for complex types
 	_ = viper.BindEnv("security.allowed_domains", "VIDEOCRAFT_SECURITY_ALLOWED_DOMAINS")
+	_ = viper.BindEnv("security.api_key", "VIDEOCRAFT_SECURITY_API_KEY")
 
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
