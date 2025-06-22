@@ -61,6 +61,12 @@ COPY --from=builder /app/videocraft .
 # Copy config
 COPY config/config.yaml ./config/
 
+# Copy Python scripts for Whisper
+COPY scripts/ ./scripts/
+
+# Install Python dependencies for Whisper
+RUN pip3 install --no-cache-dir -r scripts/requirements.txt
+
 # Create directories and set permissions
 RUN mkdir -p /app/generated_videos /app/temp /app/whisper_cache && \
     chown -R videocraft:videocraft /app
