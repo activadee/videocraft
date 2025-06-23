@@ -69,7 +69,7 @@ jobs:
           fi
 
       - name: Comprehensive Documentation Review
-        uses: grll/claude-code-action@v0.0.19-oauth
+        uses: grll/claude-code-action@v0.0.24
         env:
           GITHUB_ACTOR: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

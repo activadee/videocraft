@@ -44,7 +44,7 @@ jobs:
           EOF
 
       - name: Run Claude Code for Issue Triage
-        uses: grll/claude-code-action@v0.0.19-oauth
+        uses: grll/claude-code-action@v0.0.24
         with:
           use_oauth: true
           claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
