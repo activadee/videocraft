@@ -120,7 +120,7 @@ jobs:
 
       - name: Update Documentation
         if: steps.analyze-changes.outputs.should_process == 'true'
-        uses: grll/claude-code-action@v0.0.19-oauth
+        uses: grll/claude-code-action@v0.0.27
         env:
           GITHUB_ACTOR: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
